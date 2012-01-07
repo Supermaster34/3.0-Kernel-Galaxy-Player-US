@@ -3,4 +3,6 @@
 #
 config_data.h
 config_data.gz
+usr
+config_data.h
 timeconst.h

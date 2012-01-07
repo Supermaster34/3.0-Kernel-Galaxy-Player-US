@@ -9,3 +9,6 @@ unifdef
 ihex2fw
 recordmcount
 docproc
+bin2c
+conmakehash
+kallsyms
