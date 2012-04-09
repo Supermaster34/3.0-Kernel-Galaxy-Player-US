@@ -235,9 +235,6 @@ struct s3cfb_global {
 	wait_queue_head_t	vsync_wq;
 	ktime_t			vsync_timestamp;
 
-	int			vsync_state;
-	struct task_struct	*vsync_thread;
-
 	/* fimd */
 	int			enabled;
 	int			dsi;
