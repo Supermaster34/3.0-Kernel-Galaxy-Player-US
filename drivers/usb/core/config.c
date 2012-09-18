@@ -123,22 +123,21 @@ static void usb_parse_ss_endpoint_companion(struct device *ddev, int cfgno,
 	}
 
 	if (usb_endpoint_xfer_isoc(&ep->desc))
-		max_tx = (desc->bMaxBurst + 1) * (desc->bmAttributes + 1) *
-			le16_to_cpu(ep->desc.wMaxPacketSize);
+		max_tx = ep->desc.wMaxPacketSize * (desc->bMaxBurst + 1) *
+			(desc->bmAttributes + 1);
 	else if (usb_endpoint_xfer_int(&ep->desc))
-		max_tx = le16_to_cpu(ep->desc.wMaxPacketSize) *
-			(desc->bMaxBurst + 1);
+		max_tx = ep->desc.wMaxPacketSize * (desc->bMaxBurst + 1);
 	else
 		max_tx = 999999;
-	if (le16_to_cpu(desc->wBytesPerInterval) > max_tx) {
+	if (desc->wBytesPerInterval > max_tx) {
 		dev_warn(ddev, "%s endpoint with wBytesPerInterval of %d in "
 				"config %d interface %d altsetting %d ep %d: "
 				"setting to %d\n",
 				usb_endpoint_xfer_isoc(&ep->desc) ? "Isoc" : "Int",
-				le16_to_cpu(desc->wBytesPerInterval),
+				desc->wBytesPerInterval,
 				cfgno, inum, asnum, ep->desc.bEndpointAddress,
 				max_tx);
-		ep->ss_ep_comp.wBytesPerInterval = cpu_to_le16(max_tx);
+		ep->ss_ep_comp.wBytesPerInterval = max_tx;
 	}
 }
 

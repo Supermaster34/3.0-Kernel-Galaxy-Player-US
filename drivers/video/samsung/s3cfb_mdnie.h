@@ -329,6 +329,27 @@
 #define SIG_MDNIE_VIDEO_COLD_MODE			3
 #define SIG_MDNIE_CAMERA_MODE				4
 #define SIG_MDNIE_NAVI						5
+#define SIG_MDNIe_DMB_MODE					6
+#define SIG_MDNIe_DMB_WARM_MODE				7
+#define SIG_MDNIe_DMB_COLD_MODE				8
+#define SIG_MDNIE_GALLERY					9
+#define SIG_MDNIE_VT_MODE					10
+
+
+typedef enum
+{
+	mDNIe_UI_MODE,
+	mDNIe_VIDEO_MODE,
+	mDNIe_VIDEO_WARM_MODE,
+	mDNIe_VIDEO_COLD_MODE,
+	mDNIe_CAMERA_MODE,
+	mDNIe_NAVI,
+	mDNIe_DMB_MODE,
+	mDNIe_DMB_WARM_MODE,
+	mDNIe_DMB_COLD_MODE,
+	mDNIe_GALLERY,
+	MDNIE_VT_MODE,
+}Lcd_mDNIe_UI;
 
 
 int s3c_mdnie_init(void);

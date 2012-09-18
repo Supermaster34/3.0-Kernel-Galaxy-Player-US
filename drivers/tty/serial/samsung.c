@@ -1,4 +1,5 @@
-/*
+/* linux/drivers/serial/samsung.c
+ *
  * Driver core for Samsung SoC onboard UARTs.
  *
  * Ben Dooks, Copyright (c) 2003-2008 Simtec Electronics
@@ -63,7 +64,7 @@
 #define tx_enabled(port) ((port)->unused[0])
 #define rx_enabled(port) ((port)->unused[1])
 
-/* flag to ignore all characters coming in */
+/* flag to ignore all characters comming in */
 #define RXSTAT_DUMMY_READ (0x10000000)
 
 static inline struct s3c24xx_uart_port *to_ourport(struct uart_port *port)
@@ -292,7 +293,7 @@ static irqreturn_t s3c24xx_serial_tx_chars(int irq, void *id)
 		goto out;
 	}
 
-	/* if there isn't anything more to transmit, or the uart is now
+	/* if there isnt anything more to transmit, or the uart is now
 	 * stopped, disable the uart and exit
 	 */
 
@@ -353,6 +354,8 @@ static unsigned int s3c24xx_serial_get_mctrl(struct uart_port *port)
 static void s3c24xx_serial_set_mctrl(struct uart_port *port, unsigned int mctrl)
 {
 	/* todo - possibly remove AFC and do manual CTS */
+#if 1
+	if(port->line == 0) {
 	unsigned int umcon = 0;
 	umcon = rd_regl(port, S3C2410_UMCON);
 	if (mctrl & TIOCM_RTS)
@@ -361,6 +364,8 @@ static void s3c24xx_serial_set_mctrl(struct uart_port *port, unsigned int mctrl)
 		umcon &= ~S3C2410_UMCOM_AFC;
 
 	wr_regl(port, S3C2410_UMCON, umcon);
+	}
+#endif
 }
 
 static void s3c24xx_serial_break_ctl(struct uart_port *port, int break_state)
@@ -719,13 +724,8 @@ static void s3c24xx_serial_set_termios(struct uart_port *port,
 	if (ourport->info->has_divslot) {
 		unsigned int div = ourport->baudclk_rate / baud;
 
-		if (cfg->has_fracval) {
-			udivslot = (div & 15);
-			dbg("fracval = %04x\n", udivslot);
-		} else {
-			udivslot = udivslot_table[div & 15];
-			dbg("udivslot = %04x (div %d)\n", udivslot, div & 15);
-		}
+		udivslot = udivslot_table[div & 15];
+		dbg("udivslot = %04x (div %d)\n", udivslot, div & 15);
 	}
 
 	switch (termios->c_cflag & CSIZE) {
@@ -907,10 +907,10 @@ static struct uart_ops s3c24xx_serial_ops = {
 
 static struct uart_driver s3c24xx_uart_drv = {
 	.owner		= THIS_MODULE,
-	.driver_name	= "s3c2410_serial",
+	.dev_name	= "s3c2410_serial",
 	.nr		= CONFIG_SERIAL_SAMSUNG_UARTS,
 	.cons		= S3C24XX_SERIAL_CONSOLE,
-	.dev_name	= "s3c2410_serial",
+	.driver_name	= S3C24XX_SERIAL_NAME,
 	.major		= S3C24XX_SERIAL_MAJOR,
 	.minor		= S3C24XX_SERIAL_MINOR,
 };
@@ -1130,7 +1130,7 @@ static int s3c24xx_serial_init_port(struct s3c24xx_uart_port *ourport,
 	dbg("resource %p (%lx..%lx)\n", res, res->start, res->end);
 
 	port->mapbase = res->start;
-	port->membase = S3C_VA_UART + (res->start & 0xfffff);
+	port->membase = S3C_VA_UART + res->start - (S3C_PA_UART & 0xfff00000);
 	ret = platform_get_irq(platdev, 0);
 	if (ret < 0)
 		port->irq = 0;
@@ -1272,9 +1272,9 @@ static int s3c24xx_serial_resume(struct platform_device *dev)
 	if (port) {
 		clk_enable(ourport->clk);
 		s3c24xx_serial_resetport(port, s3c24xx_port_to_cfg(port));
+		clk_disable(ourport->clk);
 		s3c_pm_do_restore(uart_save + port->line * SAVE_UART_PORT,
 				SAVE_UART_PORT);
-		clk_disable(ourport->clk);
 		uart_resume_port(&s3c24xx_uart_drv, port);
 	}
 

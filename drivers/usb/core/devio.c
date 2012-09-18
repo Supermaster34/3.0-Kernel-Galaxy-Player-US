@@ -37,6 +37,7 @@
 #include <linux/fs.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
+#include <linux/smp_lock.h>
 #include <linux/signal.h>
 #include <linux/poll.h>
 #include <linux/module.h>
@@ -802,7 +803,7 @@ static int proc_control(struct dev_state *ps, void __user *arg)
 				    tbuf, ctrl.wLength, tmo);
 		usb_lock_device(dev);
 		snoop_urb(dev, NULL, pipe, max(i, 0), min(i, 0), COMPLETE,
-			  tbuf, max(i, 0));
+			tbuf, i);
 		if ((i > 0) && ctrl.wLength) {
 			if (copy_to_user(ctrl.data, tbuf, i)) {
 				free_page((unsigned long)tbuf);
@@ -964,11 +965,10 @@ static int proc_getdriver(struct dev_state *ps, void __user *arg)
 
 static int proc_connectinfo(struct dev_state *ps, void __user *arg)
 {
-	struct usbdevfs_connectinfo ci = {
-		.devnum = ps->dev->devnum,
-		.slow = ps->dev->speed == USB_SPEED_LOW
-	};
+	struct usbdevfs_connectinfo ci;
 
+	ci.devnum = ps->dev->devnum;
+	ci.slow = ps->dev->speed == USB_SPEED_LOW;
 	if (copy_to_user(arg, &ci, sizeof(ci)))
 		return -EFAULT;
 	return 0;
@@ -1668,10 +1668,13 @@ static int proc_ioctl(struct dev_state *ps, struct usbdevfs_ioctl *ctl)
 	default:
 		if (intf->dev.driver)
 			driver = to_usb_driver(intf->dev.driver);
-		if (driver == NULL || driver->unlocked_ioctl == NULL) {
+		if (driver == NULL || driver->ioctl == NULL) {
 			retval = -ENOTTY;
 		} else {
-			retval = driver->unlocked_ioctl(intf, ctl->ioctl_code, buf);
+			/* keep API that guarantees BKL */
+			lock_kernel();
+			retval = driver->ioctl(intf, ctl->ioctl_code, buf);
+			unlock_kernel();
 			if (retval == -ENOIOCTLCMD)
 				retval = -ENOTTY;
 		}

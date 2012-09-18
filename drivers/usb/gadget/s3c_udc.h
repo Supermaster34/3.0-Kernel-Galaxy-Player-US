@@ -39,10 +39,10 @@
 #include <linux/mm.h>
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
+#include <linux/io.h>
 
 #include <asm/byteorder.h>
 #include <asm/dma.h>
-#include <linux/io.h>
 #include <asm/irq.h>
 #include <asm/system.h>
 #include <asm/unaligned.h>
@@ -83,6 +83,54 @@
 #define TEST_PACKET_SEL		0x4
 #define TEST_FORCE_ENABLE_SEL	0x5
 
+/*
+ * ------------------------------------------------------------------------------------------
+ * Debugging macro and defines
+ */
+/*#define CSY_DEBUG */
+/* #define CSY_DEBUG2 */
+#define CSY_DEBUG_ESS
+/* #define CSY_MORE_DEBUG */
+
+#ifdef CSY_DEBUG
+#  ifdef CSY_MORE_DEBUG
+#    define CSY_DBG(fmt, args...) printk(KERN_INFO "usb %s:%d "fmt, __func__, __LINE__, ##args)
+#  else
+#    define CSY_DBG(fmt, args...) printk(KERN_DEBUG "usb "fmt, ##args)
+#  endif
+#else /* DO NOT PRINT LOG */
+#  define CSY_DBG(fmt, args...) do { } while (0)
+#endif /* CSY_DEBUG */
+
+#ifdef CSY_DEBUG2
+#  ifdef CSY_MORE_DEBUG
+#    define CSY_DBG2(fmt, args...) printk(KERN_INFO "usb %s:%d "fmt, __func__, __LINE__, ##args)
+#  else
+#    define CSY_DBG2(fmt, args...) printk(KERN_DEBUG "usb "fmt, ##args)
+#  endif
+#else /* DO NOT PRINT LOG */
+#  define CSY_DBG2(fmt, args...) do { } while (0)
+#endif /* CSY_DEBUG2 */
+
+#ifdef CSY_DEBUG_ESS
+#  ifdef CSY_MORE_DEBUG
+#    define CSY_DBG_ESS(fmt, args...) printk(KERN_INFO "usb %s:%d "fmt, __func__, __LINE__, ##args)
+#  else
+#    define CSY_DBG_ESS(fmt, args...) printk(KERN_DEBUG "usb "fmt, ##args)
+#  endif
+#else /* DO NOT PRINT LOG */
+#  define CSY_DBG_ESS(fmt, args...) do { } while (0)
+#endif /* CSY_DEBUG_ESS */
+
+#ifdef CSY_DEBUG
+#undef DBG
+#  define DBG(devvalue, fmt, args...) \
+	printk(KERN_INFO "usb %s:%d "fmt, __func__, __LINE__, ##args)
+#endif
+
+/* ************************************************************************* */
+/* IO
+ */
 
 typedef enum ep_type {
 	ep_control, ep_bulk_in, ep_bulk_out, ep_interrupt
@@ -114,6 +162,7 @@ struct s3c_request {
 	unsigned char mapped;
 };
 
+
 struct s3c_udc {
 	struct usb_gadget gadget;
 	struct usb_gadget_driver *driver;
@@ -130,13 +179,11 @@ struct s3c_udc {
 
 	struct regulator *udc_vcc_d, *udc_vcc_a;
 	int udc_enabled;
-	int soft_disconnected;
 };
 
 extern struct s3c_udc *the_controller;
 extern void otg_phy_init(void);
 extern void otg_phy_off(void);
-extern struct usb_ctrlrequest usb_ctrl;
 extern struct i2c_driver fsa9480_i2c_driver;
 
 #define ep_is_in(EP)		(((EP)->bEndpointAddress&USB_DIR_IN) == USB_DIR_IN)

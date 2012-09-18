@@ -2518,6 +2518,9 @@ extern void		netdev_features_change(struct net_device *dev);
 /* Load a device via the kmod */
 extern void		dev_load(struct net *net, const char *name);
 extern void		dev_mcast_init(void);
+
+extern const struct net_device_stats_depreciated *dev_get_stats_depreciated(struct net_device *dev);
+
 extern struct rtnl_link_stats64 *dev_get_stats(struct net_device *dev,
 					       struct rtnl_link_stats64 *storage);
 

@@ -456,6 +456,7 @@ static void ftdi_elan_cancel_targets(struct usb_ftdi *ftdi)
 static void ftdi_elan_kick_command_queue(struct usb_ftdi *ftdi)
 {
         ftdi_command_queue_work(ftdi, 0);
+        return;
 }
 
 static void ftdi_elan_command_work(struct work_struct *work)
@@ -482,6 +483,7 @@ static void ftdi_elan_command_work(struct work_struct *work)
 static void ftdi_elan_kick_respond_queue(struct usb_ftdi *ftdi)
 {
         ftdi_respond_queue_work(ftdi, 0);
+        return;
 }
 
 static void ftdi_elan_respond_work(struct work_struct *work)
@@ -648,7 +650,7 @@ static int ftdi_elan_open(struct inode *inode, struct file *file)
 
 static int ftdi_elan_release(struct inode *inode, struct file *file)
 {
-        struct usb_ftdi *ftdi = file->private_data;
+        struct usb_ftdi *ftdi = (struct usb_ftdi *)file->private_data;
         if (ftdi == NULL)
                 return -ENODEV;
         up(&ftdi->sw_lock);        /* decrement the count on our device */
@@ -671,7 +673,7 @@ static ssize_t ftdi_elan_read(struct file *file, char __user *buffer,
         int bytes_read = 0;
         int retry_on_empty = 10;
         int retry_on_timeout = 5;
-        struct usb_ftdi *ftdi = file->private_data;
+        struct usb_ftdi *ftdi = (struct usb_ftdi *)file->private_data;
         if (ftdi->disconnected > 0) {
                 return -ENODEV;
         }
@@ -2767,7 +2769,7 @@ static int ftdi_elan_probe(struct usb_interface *interface,
         ftdi->sequence_num = ++ftdi_instances;
         mutex_unlock(&ftdi_module_lock);
         ftdi_elan_init_kref(ftdi);
-	sema_init(&ftdi->sw_lock, 1);
+        init_MUTEX(&ftdi->sw_lock);
         ftdi->udev = usb_get_dev(interface_to_usbdev(interface));
         ftdi->interface = interface;
         mutex_init(&ftdi->u132_lock);
@@ -2889,7 +2891,8 @@ static struct usb_driver ftdi_elan_driver = {
 static int __init ftdi_elan_init(void)
 {
         int result;
-        printk(KERN_INFO "driver %s\n", ftdi_elan_driver.name);
+        printk(KERN_INFO "driver %s built at %s on %s\n", ftdi_elan_driver.name,
+	       __TIME__, __DATE__);
         mutex_init(&ftdi_module_lock);
         INIT_LIST_HEAD(&ftdi_static_list);
         status_queue = create_singlethread_workqueue("ftdi-status-control");

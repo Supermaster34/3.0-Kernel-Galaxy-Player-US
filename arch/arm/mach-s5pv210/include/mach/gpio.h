@@ -250,4 +250,20 @@ extern int s3c_gpio_set_slewrate(unsigned int pin, unsigned int config);
 extern int s3c_gpio_slp_setpull_updown(unsigned int pin, s3c_gpio_pull_t pull);
 extern int s5pv210_gpiolib_init(void);
 
+#if defined(CONFIG_MACH_VENTURI)
+
+#if defined(CONFIG_TDMB)	// VenturiGB_Usys_jypark 2011.08.08 - DMB [[
+#include <mach/gpio-venturi-kor.h>
+#else						// VenturiGB_Usys_jypark 2011.08.08 - DMB ]]
+#include <mach/gpio-venturi.h>
+#endif
+
+#else
+#if (defined(CONFIG_MACH_ARIES)	&& defined(CONFIG_TDMB))	// VenturiGB_Usys_jypark 2011.08.16 - DMB [[
+#include <mach/gpio-palladio-kor.h>
+#else								// VenturiGB_Usys_jypark 2011.08.16 - DMB ]]
+#include <mach/gpio-aries.h>
+#endif
+#endif
+
 #endif /* __ASM_ARCH_GPIO_H */
