@@ -150,10 +150,10 @@ static int s3cfb_draw_logo(struct fb_info *fb)
 		iounmap(logo_virt_buf);
 	}
 */
-	if (readl(S5P_INFORM5)) //LPM_CHARGING mode
-		memcpy(fb->screen_base, charging, fb->var.yres * fb->fix.line_length);
-	else
-		memcpy(fb->screen_base, LOGO_RGB24, fb->var.yres * fb->fix.line_length);
+	//if (readl(S5P_INFORM5)) //LPM_CHARGING mode
+	//	memcpy(fb->screen_base, charging, fb->var.yres * fb->fix.line_length);
+	//else
+	//	memcpy(fb->screen_base, LOGO_RGB24, fb->var.yres * fb->fix.line_length);
 	return 0;
 }
 #endif
