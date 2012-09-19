@@ -197,59 +197,6 @@ int __init musb_platform_init(struct musb *musb, void *board_data)
 #if defined(CONFIG_ARCH_OMAP2430)
 	omap_cfg_reg(AE5_2430_USB0HS_STP);
 #endif
-<<<<<<< HEAD
-=======
-		} else {
-			pm_runtime_get_sync(musb->controller);
-			otg_init(musb->xceiv);
-			omap2430_musb_set_vbus(musb, 1);
-		}
-		break;
-
-	case USB_EVENT_VBUS:
-		dev_dbg(musb->controller, "VBUS Connect\n");
-
-#ifdef CONFIG_USB_GADGET_MUSB_HDRC
-		if (musb->gadget_driver)
-			pm_runtime_get_sync(musb->controller);
-#endif
-		otg_init(musb->xceiv);
-		break;
-
-	case USB_EVENT_NONE:
-		dev_dbg(musb->controller, "VBUS Disconnect\n");
-
-#ifdef CONFIG_USB_GADGET_MUSB_HDRC
-		if (is_otg_enabled(musb) || is_peripheral_enabled(musb))
-			if (musb->gadget_driver)
-#endif
-			{
-				pm_runtime_mark_last_busy(musb->controller);
-				pm_runtime_put_autosuspend(musb->controller);
-			}
-
-		if (data->interface_type == MUSB_INTERFACE_UTMI) {
-			if (musb->xceiv->set_vbus)
-				otg_set_vbus(musb->xceiv, 0);
-		}
-		otg_shutdown(musb->xceiv);
-		break;
-	default:
-		dev_dbg(musb->controller, "ID float\n");
-		return NOTIFY_DONE;
-	}
-
-	return NOTIFY_OK;
-}
-
-static int omap2430_musb_init(struct musb *musb)
-{
-	u32 l;
-	int status = 0;
-	struct device *dev = musb->controller;
-	struct musb_hdrc_platform_data *plat = dev->platform_data;
-	struct omap_musb_board_data *data = plat->board_data;
->>>>>>> GoogleSamsung/android-samsung-3.0-jb
 
 	/* We require some kind of external transceiver, hooked
 	 * up through ULPI.  TWL4030-family PMICs include one,
@@ -261,7 +208,6 @@ static int omap2430_musb_init(struct musb *musb)
 		return -ENODEV;
 	}
 
-<<<<<<< HEAD
 	musb_platform_resume(musb);
 
 	l = musb_readl(musb->mregs, OTG_SYSCONFIG);
@@ -278,13 +224,6 @@ static int omap2430_musb_init(struct musb *musb)
 	if (!cpu_is_omap3430())
 		l |= AUTOIDLE;		/* enable auto idle */
 	musb_writel(musb->mregs, OTG_SYSCONFIG, l);
-=======
-	status = pm_runtime_get_sync(dev);
-	if (status < 0) {
-		dev_err(dev, "pm_runtime_get_sync FAILED %d\n", status);
-		goto err1;
-	}
->>>>>>> GoogleSamsung/android-samsung-3.0-jb
 
 	l = musb_readl(musb->mregs, OTG_INTERFSEL);
 
@@ -346,7 +285,6 @@ static int musb_platform_suspend(struct musb *musb)
 	l |= ENABLEWAKEUP;	/* enable wakeup */
 	musb_writel(musb->mregs, OTG_SYSCONFIG, l);
 
-<<<<<<< HEAD
 	otg_set_suspend(musb->xceiv, 1);
 
 	if (musb->set_clock)
@@ -354,16 +292,6 @@ static int musb_platform_suspend(struct musb *musb)
 	else
 		clk_disable(musb->clock);
 
-=======
-	pm_runtime_enable(&pdev->dev);
-
-	ret = platform_device_add(musb);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to register musb device\n");
-		goto err2;
-	}
-
->>>>>>> GoogleSamsung/android-samsung-3.0-jb
 	return 0;
 }
 

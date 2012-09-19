@@ -308,8 +308,7 @@ static void sg_complete(struct urb *urb)
 				retval = usb_unlink_urb(io->urbs [i]);
 				if (retval != -EINPROGRESS &&
 				    retval != -ENODEV &&
-				    retval != -EBUSY &&
-				    retval != -EIDRM)
+				    retval != -EBUSY)
 					dev_err(&io->dev->dev,
 						"%s, unlink --> %d\n",
 						__func__, retval);
@@ -318,6 +317,7 @@ static void sg_complete(struct urb *urb)
 		}
 		spin_lock(&io->lock);
 	}
+	urb->dev = NULL;
 
 	/* on the last completion, signal usb_sg_wait() */
 	io->bytes += urb->actual_length;
@@ -524,6 +524,7 @@ void usb_sg_wait(struct usb_sg_request *io)
 		case -ENXIO:	/* hc didn't queue this one */
 		case -EAGAIN:
 		case -ENOMEM:
+			io->urbs[i]->dev = NULL;
 			retval = 0;
 			yield();
 			break;
@@ -541,6 +542,7 @@ void usb_sg_wait(struct usb_sg_request *io)
 
 			/* fail any uncompleted urbs */
 		default:
+			io->urbs[i]->dev = NULL;
 			io->urbs[i]->status = retval;
 			dev_dbg(&io->dev->dev, "%s, submit --> %d\n",
 				__func__, retval);
@@ -591,10 +593,7 @@ void usb_sg_cancel(struct usb_sg_request *io)
 			if (!io->urbs [i]->dev)
 				continue;
 			retval = usb_unlink_urb(io->urbs [i]);
-			if (retval != -EINPROGRESS
-					&& retval != -ENODEV
-					&& retval != -EBUSY
-					&& retval != -EIDRM)
+			if (retval != -EINPROGRESS && retval != -EBUSY)
 				dev_warn(&io->dev->dev, "%s, unlink --> %d\n",
 					__func__, retval);
 		}
@@ -1177,28 +1176,6 @@ void usb_disable_device(struct usb_device *dev, int skip_ep0)
 		if (dev->state == USB_STATE_CONFIGURED)
 			usb_set_device_state(dev, USB_STATE_ADDRESS);
 	}
-<<<<<<< HEAD
-=======
-
-	dev_dbg(&dev->dev, "%s nuking %s URBs\n", __func__,
-		skip_ep0 ? "non-ep0" : "all");
-	if (hcd->driver->check_bandwidth) {
-		/* First pass: Cancel URBs, leave endpoint pointers intact. */
-		for (i = skip_ep0; i < 16; ++i) {
-			usb_disable_endpoint(dev, i, false);
-			usb_disable_endpoint(dev, i + USB_DIR_IN, false);
-		}
-		/* Remove endpoints from the host controller internal state */
-		mutex_lock(hcd->bandwidth_mutex);
-		usb_hcd_alloc_bandwidth(dev, NULL, NULL, NULL);
-		mutex_unlock(hcd->bandwidth_mutex);
-		/* Second pass: remove endpoint pointers */
-	}
-	for (i = skip_ep0; i < 16; ++i) {
-		usb_disable_endpoint(dev, i, true);
-		usb_disable_endpoint(dev, i + USB_DIR_IN, true);
-	}
->>>>>>> GoogleSamsung/android-samsung-3.0-jb
 }
 
 /**
@@ -1762,11 +1739,7 @@ free_interfaces:
 	 * host controller will not allow submissions to dropped endpoints.  If
 	 * this call fails, the device state is unchanged.
 	 */
-<<<<<<< HEAD
 	mutex_lock(&hcd->bandwidth_mutex);
-=======
-	mutex_lock(hcd->bandwidth_mutex);
->>>>>>> GoogleSamsung/android-samsung-3.0-jb
 	ret = usb_hcd_alloc_bandwidth(dev, cp, NULL, NULL);
 	if (ret < 0) {
 		mutex_unlock(&hcd->bandwidth_mutex);

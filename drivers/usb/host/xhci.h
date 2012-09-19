@@ -204,10 +204,6 @@ struct xhci_op_regs {
 #define CMD_PM_INDEX	(1 << 11)
 /* bits 12:31 are reserved (and should be preserved on writes). */
 
-/* IMAN - Interrupt Management Register */
-#define IMAN_IP		(1 << 1)
-#define IMAN_IE		(1 << 0)
-
 /* USBSTS - USB status - status bitmasks */
 /* HC not running - set to 1 when run/stop bit is cleared. */
 #define STS_HALT	XHCI_STS_HALT
@@ -844,6 +840,7 @@ struct xhci_transfer_event {
 /* Invalid Stream ID Error */
 #define COMP_STRID_ERR	34
 /* Secondary Bandwidth Error - may be returned by a Configure Endpoint cmd */
+/* FIXME - check for this */
 #define COMP_2ND_BW_ERR	35
 /* Split Transaction Error */
 #define	COMP_SPLIT_ERR	36
@@ -1185,36 +1182,6 @@ struct xhci_hcd {
 #define	XHCI_LINK_TRB_QUIRK	(1 << 0)
 #define XHCI_RESET_EP_QUIRK	(1 << 1)
 #define XHCI_NEC_HOST		(1 << 2)
-<<<<<<< HEAD
-=======
-#define XHCI_AMD_PLL_FIX	(1 << 3)
-#define XHCI_SPURIOUS_SUCCESS	(1 << 4)
-/*
- * Certain Intel host controllers have a limit to the number of endpoint
- * contexts they can handle.  Ideally, they would signal that they can't handle
- * anymore endpoint contexts by returning a Resource Error for the Configure
- * Endpoint command, but they don't.  Instead they expect software to keep track
- * of the number of active endpoints for them, across configure endpoint
- * commands, reset device commands, disable slot commands, and address device
- * commands.
- */
-#define XHCI_EP_LIMIT_QUIRK	(1 << 5)
-#define XHCI_BROKEN_MSI		(1 << 6)
-#define XHCI_RESET_ON_RESUME	(1 << 7)
-#define XHCI_AMD_0x96_HOST	(1 << 9)
-	unsigned int		num_active_eps;
-	unsigned int		limit_active_eps;
-	/* There are two roothubs to keep track of bus suspend info for */
-	struct xhci_bus_state   bus_state[2];
-	/* Is each xHCI roothub port a USB 3.0, USB 2.0, or USB 1.1 port? */
-	u8			*port_array;
-	/* Array of pointers to USB 3.0 PORTSC registers */
-	__le32 __iomem		**usb3_ports;
-	unsigned int		num_usb3_ports;
-	/* Array of pointers to USB 2.0 PORTSC registers */
-	__le32 __iomem		**usb2_ports;
-	unsigned int		num_usb2_ports;
->>>>>>> GoogleSamsung/android-samsung-3.0-jb
 };
 
 /* For testing purposes */
@@ -1457,8 +1424,6 @@ void xhci_queue_config_ep_quirk(struct xhci_hcd *xhci,
 void xhci_stop_endpoint_command_watchdog(unsigned long arg);
 
 /* xHCI roothub code */
-void xhci_test_and_clear_bit(struct xhci_hcd *xhci, __le32 __iomem **port_array,
-				int port_id, u32 port_bit);
 int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue, u16 wIndex,
 		char *buf, u16 wLength);
 int xhci_hub_status_data(struct usb_hcd *hcd, char *buf);

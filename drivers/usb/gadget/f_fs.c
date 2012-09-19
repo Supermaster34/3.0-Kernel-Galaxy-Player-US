@@ -713,12 +713,8 @@ static long ffs_ep0_ioctl(struct file *file, unsigned code, unsigned long value)
 	if (code == FUNCTIONFS_INTERFACE_REVMAP) {
 		struct ffs_function *func = ffs->func;
 		ret = func ? ffs_func_revmap_intf(func, value) : -ENODEV;
-<<<<<<< HEAD
 	} else if (gadget->ops->ioctl) {
 		lock_kernel();
-=======
-	} else if (gadget && gadget->ops->ioctl) {
->>>>>>> GoogleSamsung/android-samsung-3.0-jb
 		ret = gadget->ops->ioctl(gadget, code, value);
 		unlock_kernel();
 	} else {

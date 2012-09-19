@@ -156,13 +156,7 @@ enum ftdi_chip_type {
 	FT2232C = 4,
 	FT232RL = 5,
 	FT2232H = 6,
-<<<<<<< HEAD
 	FT4232H = 7
-=======
-	FT4232H = 7,
-	FT232H  = 8,
-	FTX     = 9,
->>>>>>> GoogleSamsung/android-samsung-3.0-jb
 };
 
 enum ftdi_sio_baudrate {

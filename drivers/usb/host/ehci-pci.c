@@ -119,26 +119,6 @@ static int ehci_pci_setup(struct usb_hcd *hcd)
 			ehci->broken_periodic = 1;
 			ehci_info(ehci, "using broken periodic workaround\n");
 		}
-<<<<<<< HEAD
-=======
-		if (pdev->device == 0x0806 || pdev->device == 0x0811
-				|| pdev->device == 0x0829) {
-			ehci_info(ehci, "disable lpm for langwell/penwell\n");
-			ehci->has_lpm = 0;
-		}
-		if (pdev->device == PCI_DEVICE_ID_INTEL_CE4100_USB) {
-			hcd->has_tt = 1;
-			tdi_reset(ehci);
-		}
-		if (pdev->subsystem_vendor == PCI_VENDOR_ID_ASUSTEK) {
-			/* EHCI #1 or #2 on 6 Series/C200 Series chipset */
-			if (pdev->device == 0x1c26 || pdev->device == 0x1c2d) {
-				ehci_info(ehci, "broken D3 during system sleep on ASUS\n");
-				hcd->broken_pci_sleep = 1;
-				device_set_wakeup_capable(&pdev->dev, false);
-			}
-		}
->>>>>>> GoogleSamsung/android-samsung-3.0-jb
 		break;
 	case PCI_VENDOR_ID_TDI:
 		if (pdev->device == PCI_DEVICE_ID_TDI_EHCI) {
@@ -200,11 +180,6 @@ static int ehci_pci_setup(struct usb_hcd *hcd)
 			}
 			pci_dev_put(p_smbus);
 		}
-		break;
-	case PCI_VENDOR_ID_NETMOS:
-		/* MosChip frame-index-register bug */
-		ehci_info(ehci, "applying MosChip frame-index workaround\n");
-		ehci->frame_index_bug = 1;
 		break;
 	}
 
