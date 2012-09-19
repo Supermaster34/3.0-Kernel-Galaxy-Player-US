@@ -201,6 +201,7 @@ static int ohci_quirk_amd700(struct usb_hcd *hcd)
 	return 0;
 }
 
+<<<<<<< HEAD
 /*
  * The hardware normally enables the A-link power management feature, which
  * lets the system lower the power consumption in idle states.
@@ -269,6 +270,8 @@ static void amd_iso_dev_put(void)
 
 }
 
+=======
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 static void sb800_prefetch(struct ohci_hcd *ohci, int on)
 {
 	struct pci_dev *pdev;

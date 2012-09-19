@@ -937,6 +937,23 @@ static int uhci_submit_common(struct uhci_hcd *uhci, struct urb *urb,
 	if (usb_pipein(urb->pipe))
 		status |= TD_CTRL_SPD;
 
+<<<<<<< HEAD
+=======
+	i = urb->num_mapped_sgs;
+	if (len > 0 && i > 0) {
+		sg = urb->sg;
+		data = sg_dma_address(sg);
+
+		/* urb->transfer_buffer_length may be smaller than the
+		 * size of the scatterlist (or vice versa)
+		 */
+		this_sg_len = min_t(int, sg_dma_len(sg), len);
+	} else {
+		sg = NULL;
+		data = urb->transfer_dma;
+		this_sg_len = len;
+	}
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 	/*
 	 * Build the DATA TDs
 	 */

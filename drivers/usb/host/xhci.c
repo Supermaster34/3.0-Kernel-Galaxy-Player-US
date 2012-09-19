@@ -433,8 +433,32 @@ int xhci_run(struct usb_hcd *hcd)
 #if 0	/* FIXME: MSI not setup yet */
 	/* Do this at the very last minute */
 	ret = xhci_setup_msix(xhci);
+<<<<<<< HEAD
 	if (!ret)
 		return ret;
+=======
+	if (ret)
+		/* fall back to msi*/
+		ret = xhci_setup_msi(xhci);
+
+	if (ret) {
+legacy_irq:
+		if (!pdev->irq) {
+			xhci_err(xhci, "No msi-x/msi found and "
+					"no IRQ in BIOS\n");
+			return -EINVAL;
+		}
+		/* fall back to legacy interrupt*/
+		ret = request_irq(pdev->irq, &usb_hcd_irq, IRQF_SHARED,
+					hcd->irq_descr, hcd);
+		if (ret) {
+			xhci_err(xhci, "request interrupt %d failed\n",
+					pdev->irq);
+			return ret;
+		}
+		hcd->irq = pdev->irq;
+	}
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 
 	return -ENOSYS;
 #endif
@@ -570,6 +594,282 @@ void xhci_shutdown(struct usb_hcd *hcd)
 		    xhci_readl(xhci, &xhci->op_regs->status));
 }
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_PM
+static void xhci_save_registers(struct xhci_hcd *xhci)
+{
+	xhci->s3.command = xhci_readl(xhci, &xhci->op_regs->command);
+	xhci->s3.dev_nt = xhci_readl(xhci, &xhci->op_regs->dev_notification);
+	xhci->s3.dcbaa_ptr = xhci_read_64(xhci, &xhci->op_regs->dcbaa_ptr);
+	xhci->s3.config_reg = xhci_readl(xhci, &xhci->op_regs->config_reg);
+	xhci->s3.erst_size = xhci_readl(xhci, &xhci->ir_set->erst_size);
+	xhci->s3.erst_base = xhci_read_64(xhci, &xhci->ir_set->erst_base);
+	xhci->s3.erst_dequeue = xhci_read_64(xhci, &xhci->ir_set->erst_dequeue);
+	xhci->s3.irq_pending = xhci_readl(xhci, &xhci->ir_set->irq_pending);
+	xhci->s3.irq_control = xhci_readl(xhci, &xhci->ir_set->irq_control);
+}
+
+static void xhci_restore_registers(struct xhci_hcd *xhci)
+{
+	xhci_writel(xhci, xhci->s3.command, &xhci->op_regs->command);
+	xhci_writel(xhci, xhci->s3.dev_nt, &xhci->op_regs->dev_notification);
+	xhci_write_64(xhci, xhci->s3.dcbaa_ptr, &xhci->op_regs->dcbaa_ptr);
+	xhci_writel(xhci, xhci->s3.config_reg, &xhci->op_regs->config_reg);
+	xhci_writel(xhci, xhci->s3.erst_size, &xhci->ir_set->erst_size);
+	xhci_write_64(xhci, xhci->s3.erst_base, &xhci->ir_set->erst_base);
+	xhci_write_64(xhci, xhci->s3.erst_dequeue, &xhci->ir_set->erst_dequeue);
+	xhci_writel(xhci, xhci->s3.irq_pending, &xhci->ir_set->irq_pending);
+	xhci_writel(xhci, xhci->s3.irq_control, &xhci->ir_set->irq_control);
+}
+
+static void xhci_set_cmd_ring_deq(struct xhci_hcd *xhci)
+{
+	u64	val_64;
+
+	/* step 2: initialize command ring buffer */
+	val_64 = xhci_read_64(xhci, &xhci->op_regs->cmd_ring);
+	val_64 = (val_64 & (u64) CMD_RING_RSVD_BITS) |
+		(xhci_trb_virt_to_dma(xhci->cmd_ring->deq_seg,
+				      xhci->cmd_ring->dequeue) &
+		 (u64) ~CMD_RING_RSVD_BITS) |
+		xhci->cmd_ring->cycle_state;
+	xhci_dbg(xhci, "// Setting command ring address to 0x%llx\n",
+			(long unsigned long) val_64);
+	xhci_write_64(xhci, val_64, &xhci->op_regs->cmd_ring);
+}
+
+/*
+ * The whole command ring must be cleared to zero when we suspend the host.
+ *
+ * The host doesn't save the command ring pointer in the suspend well, so we
+ * need to re-program it on resume.  Unfortunately, the pointer must be 64-byte
+ * aligned, because of the reserved bits in the command ring dequeue pointer
+ * register.  Therefore, we can't just set the dequeue pointer back in the
+ * middle of the ring (TRBs are 16-byte aligned).
+ */
+static void xhci_clear_command_ring(struct xhci_hcd *xhci)
+{
+	struct xhci_ring *ring;
+	struct xhci_segment *seg;
+
+	ring = xhci->cmd_ring;
+	seg = ring->deq_seg;
+	do {
+		memset(seg->trbs, 0,
+			sizeof(union xhci_trb) * (TRBS_PER_SEGMENT - 1));
+		seg->trbs[TRBS_PER_SEGMENT - 1].link.control &=
+			cpu_to_le32(~TRB_CYCLE);
+		seg = seg->next;
+	} while (seg != ring->deq_seg);
+
+	/* Reset the software enqueue and dequeue pointers */
+	ring->deq_seg = ring->first_seg;
+	ring->dequeue = ring->first_seg->trbs;
+	ring->enq_seg = ring->deq_seg;
+	ring->enqueue = ring->dequeue;
+
+	/*
+	 * Ring is now zeroed, so the HW should look for change of ownership
+	 * when the cycle bit is set to 1.
+	 */
+	ring->cycle_state = 1;
+
+	/*
+	 * Reset the hardware dequeue pointer.
+	 * Yes, this will need to be re-written after resume, but we're paranoid
+	 * and want to make sure the hardware doesn't access bogus memory
+	 * because, say, the BIOS or an SMI started the host without changing
+	 * the command ring pointers.
+	 */
+	xhci_set_cmd_ring_deq(xhci);
+}
+
+/*
+ * Stop HC (not bus-specific)
+ *
+ * This is called when the machine transition into S3/S4 mode.
+ *
+ */
+int xhci_suspend(struct xhci_hcd *xhci)
+{
+	int			rc = 0;
+	struct usb_hcd		*hcd = xhci_to_hcd(xhci);
+	u32			command;
+	int			i;
+
+	spin_lock_irq(&xhci->lock);
+	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &xhci->shared_hcd->flags);
+	/* step 1: stop endpoint */
+	/* skipped assuming that port suspend has done */
+
+	/* step 2: clear Run/Stop bit */
+	command = xhci_readl(xhci, &xhci->op_regs->command);
+	command &= ~CMD_RUN;
+	xhci_writel(xhci, command, &xhci->op_regs->command);
+	if (handshake(xhci, &xhci->op_regs->status,
+		      STS_HALT, STS_HALT, 100*100)) {
+		xhci_warn(xhci, "WARN: xHC CMD_RUN timeout\n");
+		spin_unlock_irq(&xhci->lock);
+		return -ETIMEDOUT;
+	}
+	xhci_clear_command_ring(xhci);
+
+	/* step 3: save registers */
+	xhci_save_registers(xhci);
+
+	/* step 4: set CSS flag */
+	command = xhci_readl(xhci, &xhci->op_regs->command);
+	command |= CMD_CSS;
+	xhci_writel(xhci, command, &xhci->op_regs->command);
+	if (handshake(xhci, &xhci->op_regs->status, STS_SAVE, 0, 10*100)) {
+		xhci_warn(xhci, "WARN: xHC CMD_CSS timeout\n");
+		spin_unlock_irq(&xhci->lock);
+		return -ETIMEDOUT;
+	}
+	spin_unlock_irq(&xhci->lock);
+
+	/* step 5: remove core well power */
+	/* synchronize irq when using MSI-X */
+	if (xhci->msix_entries) {
+		for (i = 0; i < xhci->msix_count; i++)
+			synchronize_irq(xhci->msix_entries[i].vector);
+	}
+
+	return rc;
+}
+
+/*
+ * start xHC (not bus-specific)
+ *
+ * This is called when the machine transition from S3/S4 mode.
+ *
+ */
+int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
+{
+	u32			command, temp = 0;
+	struct usb_hcd		*hcd = xhci_to_hcd(xhci);
+	struct usb_hcd		*secondary_hcd;
+	int			retval = 0;
+
+	/* Wait a bit if either of the roothubs need to settle from the
+	 * transition into bus suspend.
+	 */
+	if (time_before(jiffies, xhci->bus_state[0].next_statechange) ||
+			time_before(jiffies,
+				xhci->bus_state[1].next_statechange))
+		msleep(100);
+
+	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+	set_bit(HCD_FLAG_HW_ACCESSIBLE, &xhci->shared_hcd->flags);
+
+	spin_lock_irq(&xhci->lock);
+	if (xhci->quirks & XHCI_RESET_ON_RESUME)
+		hibernated = true;
+
+	if (!hibernated) {
+		/* step 1: restore register */
+		xhci_restore_registers(xhci);
+		/* step 2: initialize command ring buffer */
+		xhci_set_cmd_ring_deq(xhci);
+		/* step 3: restore state and start state*/
+		/* step 3: set CRS flag */
+		command = xhci_readl(xhci, &xhci->op_regs->command);
+		command |= CMD_CRS;
+		xhci_writel(xhci, command, &xhci->op_regs->command);
+		if (handshake(xhci, &xhci->op_regs->status,
+			      STS_RESTORE, 0, 10*100)) {
+			xhci_dbg(xhci, "WARN: xHC CMD_CSS timeout\n");
+			spin_unlock_irq(&xhci->lock);
+			return -ETIMEDOUT;
+		}
+		temp = xhci_readl(xhci, &xhci->op_regs->status);
+	}
+
+	/* If restore operation fails, re-initialize the HC during resume */
+	if ((temp & STS_SRE) || hibernated) {
+		/* Let the USB core know _both_ roothubs lost power. */
+		usb_root_hub_lost_power(xhci->main_hcd->self.root_hub);
+		usb_root_hub_lost_power(xhci->shared_hcd->self.root_hub);
+
+		xhci_dbg(xhci, "Stop HCD\n");
+		xhci_halt(xhci);
+		xhci_reset(xhci);
+		spin_unlock_irq(&xhci->lock);
+		xhci_cleanup_msix(xhci);
+
+#ifdef CONFIG_USB_XHCI_HCD_DEBUGGING
+		/* Tell the event ring poll function not to reschedule */
+		xhci->zombie = 1;
+		del_timer_sync(&xhci->event_ring_timer);
+#endif
+
+		xhci_dbg(xhci, "// Disabling event ring interrupts\n");
+		temp = xhci_readl(xhci, &xhci->op_regs->status);
+		xhci_writel(xhci, temp & ~STS_EINT, &xhci->op_regs->status);
+		temp = xhci_readl(xhci, &xhci->ir_set->irq_pending);
+		xhci_writel(xhci, ER_IRQ_DISABLE(temp),
+				&xhci->ir_set->irq_pending);
+		xhci_print_ir_set(xhci, 0);
+
+		xhci_dbg(xhci, "cleaning up memory\n");
+		xhci_mem_cleanup(xhci);
+		xhci_dbg(xhci, "xhci_stop completed - status = %x\n",
+			    xhci_readl(xhci, &xhci->op_regs->status));
+
+		/* USB core calls the PCI reinit and start functions twice:
+		 * first with the primary HCD, and then with the secondary HCD.
+		 * If we don't do the same, the host will never be started.
+		 */
+		if (!usb_hcd_is_primary_hcd(hcd))
+			secondary_hcd = hcd;
+		else
+			secondary_hcd = xhci->shared_hcd;
+
+		xhci_dbg(xhci, "Initialize the xhci_hcd\n");
+		retval = xhci_init(hcd->primary_hcd);
+		if (retval)
+			return retval;
+		xhci_dbg(xhci, "Start the primary HCD\n");
+		retval = xhci_run(hcd->primary_hcd);
+		if (!retval) {
+			xhci_dbg(xhci, "Start the secondary HCD\n");
+			retval = xhci_run(secondary_hcd);
+		}
+		hcd->state = HC_STATE_SUSPENDED;
+		xhci->shared_hcd->state = HC_STATE_SUSPENDED;
+		goto done;
+	}
+
+	/* step 4: set Run/Stop bit */
+	command = xhci_readl(xhci, &xhci->op_regs->command);
+	command |= CMD_RUN;
+	xhci_writel(xhci, command, &xhci->op_regs->command);
+	handshake(xhci, &xhci->op_regs->status, STS_HALT,
+		  0, 250 * 1000);
+
+	/* step 5: walk topology and initialize portsc,
+	 * portpmsc and portli
+	 */
+	/* this is done in bus_resume */
+
+	/* step 6: restart each of the previously
+	 * Running endpoints by ringing their doorbells
+	 */
+
+	spin_unlock_irq(&xhci->lock);
+
+ done:
+	if (retval == 0) {
+		usb_hcd_resume_root_hub(hcd);
+		usb_hcd_resume_root_hub(xhci->shared_hcd);
+	}
+	return retval;
+}
+#endif	/* CONFIG_PM */
+
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 /*-------------------------------------------------------------------------*/
 
 /**
@@ -1142,6 +1442,7 @@ static int xhci_configure_endpoint_result(struct xhci_hcd *xhci,
 		/* FIXME: can we allocate more resources for the HC? */
 		break;
 	case COMP_BW_ERR:
+	case COMP_2ND_BW_ERR:
 		dev_warn(&udev->dev, "Not enough bandwidth "
 				"for new device state.\n");
 		ret = -ENOSPC;
@@ -1301,10 +1602,22 @@ int xhci_check_bandwidth(struct usb_hcd *hcd, struct usb_device *udev)
 
 	/* See section 4.6.6 - A0 = 1; A1 = D0 = D1 = 0 */
 	ctrl_ctx = xhci_get_input_control_ctx(xhci, virt_dev->in_ctx);
+<<<<<<< HEAD
 	ctrl_ctx->add_flags |= SLOT_FLAG;
 	ctrl_ctx->add_flags &= ~EP0_FLAG;
 	ctrl_ctx->drop_flags &= ~SLOT_FLAG;
 	ctrl_ctx->drop_flags &= ~EP0_FLAG;
+=======
+	ctrl_ctx->add_flags |= cpu_to_le32(SLOT_FLAG);
+	ctrl_ctx->add_flags &= cpu_to_le32(~EP0_FLAG);
+	ctrl_ctx->drop_flags &= cpu_to_le32(~(SLOT_FLAG | EP0_FLAG));
+
+	/* Don't issue the command if there's no endpoints to update. */
+	if (ctrl_ctx->add_flags == cpu_to_le32(SLOT_FLAG) &&
+			ctrl_ctx->drop_flags == 0)
+		return 0;
+
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 	xhci_dbg(xhci, "New Input Control Context:\n");
 	slot_ctx = xhci_get_slot_ctx(xhci, virt_dev->in_ctx);
 	xhci_dbg_ctx(xhci, virt_dev->in_ctx,
@@ -1587,8 +1900,7 @@ static int xhci_calculate_streams_and_bitmask(struct xhci_hcd *xhci,
 		if (ret < 0)
 			return ret;
 
-		max_streams = USB_SS_MAX_STREAMS(
-				eps[i]->ss_ep_comp.bmAttributes);
+		max_streams = usb_ss_max_streams(&eps[i]->ss_ep_comp);
 		if (max_streams < (*num_streams - 1)) {
 			xhci_dbg(xhci, "Ep 0x%x only supports %u stream IDs.\n",
 					eps[i]->desc.bEndpointAddress,
@@ -2136,7 +2448,14 @@ int xhci_address_device(struct usb_hcd *hcd, struct usb_device *udev)
 		xhci_setup_addressable_virt_dev(xhci, udev);
 	else
 		xhci_copy_ep0_dequeue_into_input_ctx(xhci, udev);
+<<<<<<< HEAD
 	/* Otherwise, assume the core has the device configured how it wants */
+=======
+	ctrl_ctx = xhci_get_input_control_ctx(xhci, virt_dev->in_ctx);
+	ctrl_ctx->add_flags = cpu_to_le32(SLOT_FLAG | EP0_FLAG);
+	ctrl_ctx->drop_flags = 0;
+
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 	xhci_dbg(xhci, "Slot ID %d Input Context:\n", udev->slot_id);
 	xhci_dbg_ctx(xhci, virt_dev->in_ctx, 2);
 
@@ -2210,7 +2529,6 @@ int xhci_address_device(struct usb_hcd *hcd, struct usb_device *udev)
 	slot_ctx = xhci_get_slot_ctx(xhci, virt_dev->out_ctx);
 	udev->devnum = (slot_ctx->dev_state & DEV_ADDR_MASK) + 1;
 	/* Zero the input context control for later use */
-	ctrl_ctx = xhci_get_input_control_ctx(xhci, virt_dev->in_ctx);
 	ctrl_ctx->add_flags = 0;
 	ctrl_ctx->drop_flags = 0;
 

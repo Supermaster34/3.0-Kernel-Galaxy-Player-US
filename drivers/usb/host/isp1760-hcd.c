@@ -1673,10 +1673,17 @@ static int isp1760_urb_dequeue(struct usb_hcd *hcd, struct urb *urb,
 	struct ptd ptd;
 	packet_enqueue *pe;
 
+<<<<<<< HEAD
 	switch (usb_pipetype(urb->pipe)) {
 	case PIPE_ISOCHRONOUS:
 		return -EPIPE;
 		break;
+=======
+	spin_lock_irqsave(&priv->lock, spinflags);
+	retval = usb_hcd_check_unlink_urb(hcd, urb, status);
+	if (retval)
+		goto out;
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 
 	case PIPE_INTERRUPT:
 		ints = priv->int_ints;

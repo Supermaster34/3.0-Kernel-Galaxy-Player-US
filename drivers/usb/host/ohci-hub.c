@@ -355,6 +355,11 @@ static void ohci_finish_controller_resume(struct usb_hcd *hcd)
 		ohci_readl(ohci, &ohci->regs->intrenable);
 		msleep(20);
 	}
+<<<<<<< HEAD
+=======
+
+	usb_hcd_resume_root_hub(hcd);
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 }
 
 /* Carry out polling-, autostop-, and autoresume-related state changes */

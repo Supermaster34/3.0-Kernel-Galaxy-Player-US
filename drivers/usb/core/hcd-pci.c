@@ -191,7 +191,10 @@ int usb_hcd_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 		return -ENODEV;
 	dev->current_state = PCI_D0;
 
-	if (!dev->irq) {
+	/* The xHCI driver supports MSI and MSI-X,
+	 * so don't fail if the BIOS doesn't provide a legacy IRQ.
+	 */
+	if (!dev->irq && (driver->flags & HCD_MASK) != HCD_USB3) {
 		dev_err(&dev->dev,
 			"Found HC with no IRQ.  Check BIOS/PCI %s setup!\n",
 			pci_name(dev));
@@ -386,8 +389,23 @@ static int hcd_pci_suspend_noirq(struct device *dev)
 
 	pci_save_state(pci_dev);
 
+<<<<<<< HEAD
 	/* If the root hub is HALTed rather than SUSPENDed,
 	 * disallow remote wakeup.
+=======
+	/*
+	 * Some systems crash if an EHCI controller is in D3 during
+	 * a sleep transition.  We have to leave such controllers in D0.
+	 */
+	if (hcd->broken_pci_sleep) {
+		dev_dbg(dev, "Staying in PCI D0\n");
+		return retval;
+	}
+
+	/* If the root hub is dead rather than suspended, disallow remote
+	 * wakeup.  usb_hc_died() should ensure that both hosts are marked as
+	 * dying, so we only need to check the primary roothub.
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 	 */
 	if (hcd->state == HC_STATE_HALT)
 		device_set_wakeup_enable(dev, 0);

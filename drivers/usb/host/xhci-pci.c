@@ -81,6 +81,29 @@ static int xhci_pci_setup(struct usb_hcd *hcd)
 	if (pdev->vendor == PCI_VENDOR_ID_NEC)
 		xhci->quirks |= XHCI_NEC_HOST;
 
+<<<<<<< HEAD
+=======
+	if (pdev->vendor == PCI_VENDOR_ID_AMD && xhci->hci_version == 0x96)
+		xhci->quirks |= XHCI_AMD_0x96_HOST;
+
+	/* AMD PLL quirk */
+	if (pdev->vendor == PCI_VENDOR_ID_AMD && usb_amd_find_chipset_info())
+		xhci->quirks |= XHCI_AMD_PLL_FIX;
+	if (pdev->vendor == PCI_VENDOR_ID_INTEL &&
+			pdev->device == PCI_DEVICE_ID_INTEL_PANTHERPOINT_XHCI) {
+		xhci->quirks |= XHCI_SPURIOUS_SUCCESS;
+		xhci->quirks |= XHCI_EP_LIMIT_QUIRK;
+		xhci->limit_active_eps = 64;
+	}
+	if (pdev->vendor == PCI_VENDOR_ID_ETRON &&
+			pdev->device == PCI_DEVICE_ID_ASROCK_P67) {
+		xhci->quirks |= XHCI_RESET_ON_RESUME;
+		xhci_dbg(xhci, "QUIRK: Resetting on resume\n");
+	}
+	if (pdev->vendor == PCI_VENDOR_ID_VIA)
+		xhci->quirks |= XHCI_RESET_ON_RESUME;
+
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 	/* Make sure the HC is halted. */
 	retval = xhci_halt(xhci);
 	if (retval)

@@ -120,9 +120,28 @@ static int usb_hcd_fsl_probe(const struct hc_driver *driver,
 	temp = in_be32(hcd->regs + 0x500);
 	out_be32(hcd->regs + 0x500, temp | 0x4);
 
+<<<<<<< HEAD
 	/* Set to Host mode */
 	temp = in_le32(hcd->regs + 0x1a8);
 	out_le32(hcd->regs + 0x1a8, temp | 0x3);
+=======
+	if (pdata->power_budget)
+		hcd->power_budget = pdata->power_budget;
+
+	/*
+	 * do platform specific init: check the clock, grab/config pins, etc.
+	 */
+	if (pdata->init && pdata->init(pdev)) {
+		retval = -ENODEV;
+		goto err4;
+	}
+
+	/* Enable USB controller, 83xx or 8536 */
+	if (pdata->have_sysif_regs)
+		setbits32(hcd->regs + FSL_SOC_USB_CTRL, 0x4);
+
+	/* Don't need to set host mode here. It will be done by tdi_reset() */
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 
 	retval = usb_add_hcd(hcd, irq, IRQF_DISABLED | IRQF_SHARED);
 	if (retval != 0)
@@ -164,7 +183,17 @@ static void mpc83xx_setup_phy(struct ehci_hcd *ehci,
 			      enum fsl_usb2_phy_modes phy_mode,
 			      unsigned int port_offset)
 {
+<<<<<<< HEAD
 	u32 portsc = 0;
+=======
+	u32 portsc;
+	struct usb_hcd *hcd = ehci_to_hcd(ehci);
+	void __iomem *non_ehci = hcd->regs;
+
+	portsc = ehci_readl(ehci, &ehci->regs->port_status[port_offset]);
+	portsc &= ~(PORT_PTS_MSK | PORT_PTS_PTW);
+
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 	switch (phy_mode) {
 	case FSL_USB2_PHY_ULPI:
 		portsc |= PORT_PTS_ULPI;
@@ -176,6 +205,8 @@ static void mpc83xx_setup_phy(struct ehci_hcd *ehci,
 		portsc |= PORT_PTS_PTW;
 		/* fall through */
 	case FSL_USB2_PHY_UTMI:
+		/* enable UTMI PHY */
+		setbits32(non_ehci + FSL_SOC_USB_CTRL, CTRL_UTMI_PHY_EN);
 		portsc |= PORT_PTS_UTMI;
 		break;
 	case FSL_USB2_PHY_NONE:

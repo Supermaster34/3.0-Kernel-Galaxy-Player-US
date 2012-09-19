@@ -163,6 +163,7 @@ static int setdma_tx(struct s3c_ep *ep, struct s3c_request *req)
 	__raw_writel(ctrl , S3C_UDC_OTG_DIEPCTL(ep_num));
 #endif
 
+<<<<<<< HEAD
 	__raw_writel(virt_to_phys(buf), S3C_UDC_OTG_DIEPDMA(ep_num));
 	__raw_writel((pktcnt<<19)|(length<<0), S3C_UDC_OTG_DIEPTSIZ(ep_num));
 	ctrl = __raw_readl(S3C_UDC_OTG_DIEPCTL(ep_num));
@@ -174,6 +175,14 @@ static int setdma_tx(struct s3c_ep *ep, struct s3c_request *req)
 		(ep_num<<DEPCTL_NEXT_EP_BIT);
 	__raw_writel(ctrl, S3C_UDC_OTG_DIEPCTL(EP0_CON));
 #endif
+=======
+	writel(virt_to_phys(buf), S3C_UDC_OTG_DIEPDMA(ep_num));
+	writel((pktcnt<<19)|(length<<0), S3C_UDC_OTG_DIEPTSIZ(ep_num));
+	ctrl = readl(S3C_UDC_OTG_DIEPCTL(ep_num));
+	if (ep->bmAttributes == USB_ENDPOINT_XFER_ISOC)
+		ctrl |= DEPCTL_SET_ODD_FRM;
+	writel(DEPCTL_EPENA|DEPCTL_CNAK|ctrl, S3C_UDC_OTG_DIEPCTL(ep_num));
+>>>>>>> GoogleSamsung/android-samsung-3.0-jb
 
 	DEBUG_IN_EP("%s:EP%d TX DMA start : DIEPDMA0 = 0x%x,"
 			"DIEPTSIZ0 = 0x%x, DIEPCTL0 = 0x%x\n"
