@@ -66,10 +66,10 @@
 
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
-#include <plat/media.h>
-#include <mach/media.h>
 #endif
 
+#include <plat/media.h>
+#include <mach/media.h>
 
 #ifdef CONFIG_SENSORS_BMA222
 #include <linux/i2c/bma023_dev.h>

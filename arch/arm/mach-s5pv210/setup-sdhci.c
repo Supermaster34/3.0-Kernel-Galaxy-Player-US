@@ -227,7 +227,7 @@ EXPORT_SYMBOL_GPL(sdhci_s3c_force_presence_change);
 void s3c_sdhci_set_platdata(void)
 {
 #if defined(CONFIG_S3C_DEV_HSMMC)
-	if (machine_is_herring()) { /* TODO: move to mach-herring.c */
+	if (machine_is_herring() || machine_is_venturi()) { /* TODO: move to mach-herring.c */
 		hsmmc0_platdata.cd_type = S3C_SDHCI_CD_PERMANENT;
 	}
 	s3c_sdhci0_set_platdata(&hsmmc0_platdata);
@@ -249,10 +249,17 @@ void s3c_sdhci_set_platdata(void)
 		}
 	}
 
+	if (machine_is_venturi()) {
+		hsmmc2_platdata.cd_type = S3C_SDHCI_CD_GPIO;
+		hsmmc2_platdata.ext_cd_gpio = S5PV210_GPH3(4);
+		hsmmc2_platdata.ext_cd_gpio_invert = true;
+		universal_sdhci2_cfg_ext_cd();
+	}
+
 	s3c_sdhci2_set_platdata(&hsmmc2_platdata);
 #endif
 #if defined(CONFIG_S3C_DEV_HSMMC3)
-	if (machine_is_herring()) {
+	if (machine_is_herring() || machine_is_venturi()) {
 		hsmmc3_platdata.cd_type = S3C_SDHCI_CD_EXTERNAL;
 		hsmmc3_platdata.ext_cd_init = ext_cd_init_hsmmc3;
 		hsmmc3_platdata.ext_cd_cleanup = ext_cd_cleanup_hsmmc3;
