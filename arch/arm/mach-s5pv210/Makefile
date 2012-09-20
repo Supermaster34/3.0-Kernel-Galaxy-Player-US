@@ -40,8 +40,7 @@ obj-$(CONFIG_MACH_HERRING)	+= dev-herring-phone.o
 obj-$(CONFIG_MACH_VENTURI)	+= mach-venturi.o aries-rfkill.o
 obj-$(CONFIG_MACH_VENTURI)	+= aries-watchdog.o
 obj-$(CONFIG_MACH_VENTURI)	+= aries-panel.o
-obj-$(CONFIG_MACH_VENTURI)  	+= level.o
-obj-$(CONFIG_MACH_VENTURI)	+= sec_switch.o
+#obj-$(CONFIG_MACH_VENTURI)	+= sec_switch.o
 #obj-$(CONFIG_MACH_VENTURI)	+= sec_jack.o
 
 # device support

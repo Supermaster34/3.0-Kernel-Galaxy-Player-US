@@ -80,6 +80,7 @@ typedef struct {
 	u16 data;
 } mDNIe_data_type;
 
+/*
 typedef enum
 {
 	mDNIe_UI_MODE,
@@ -89,6 +90,7 @@ typedef enum
 	mDNIe_CAMERA_MODE,
 	mDNIe_NAVI
 }Lcd_mDNIe_UI;
+*/
 
 struct class *mdnieset_ui_class;
 struct device *switch_mdnieset_ui_dev;

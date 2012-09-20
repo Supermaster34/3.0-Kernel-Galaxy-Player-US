@@ -308,14 +308,15 @@ int s3cfb_set_vsync_interrupt(struct s3cfb_global *ctrl, int enable)
 	u32 cfg = 0;
 
 	cfg = readl(ctrl->regs + S3C_VIDINTCON0);
-	cfg &= ~S3C_VIDINTCON0_FRAMESEL0_MASK;
 
 	if (enable) {
 		dev_dbg(ctrl->dev, "vsync interrupt is on\n");
-		cfg |= S3C_VIDINTCON0_FRAMESEL0_VSYNC;
+		cfg &= ~S3C_VIDINTCON0_FRAMESEL0_MASK;
+		cfg |= S3C_VIDINTCON0_INTFRMEN_ENABLE |
+		       S3C_VIDINTCON0_FRAMESEL0_VSYNC;
 	} else {
 		dev_dbg(ctrl->dev, "vsync interrupt is off\n");
-		cfg &= ~S3C_VIDINTCON0_FRAMESEL0_VSYNC;
+		cfg &= ~S3C_VIDINTCON0_INTFRMEN_ENABLE;
 	}
 
 	writel(cfg, ctrl->regs + S3C_VIDINTCON0);
@@ -328,9 +329,9 @@ int s3cfb_get_vsync_interrupt(struct s3cfb_global *ctrl)
 	u32 cfg = 0;
 
 	cfg = readl(ctrl->regs + S3C_VIDINTCON0);
-	cfg &= S3C_VIDINTCON0_FRAMESEL0_VSYNC;
+	cfg &= S3C_VIDINTCON0_INTFRMEN_ENABLE;
 
-	if (cfg & S3C_VIDINTCON0_FRAMESEL0_VSYNC) {
+	if (cfg & S3C_VIDINTCON0_INTFRMEN_ENABLE) {
 		dev_dbg(ctrl->dev, "vsync interrupt is on\n");
 		return 1;
 	} else {
@@ -610,6 +611,18 @@ int s3cfb_set_buffer_address(struct s3cfb_global *ctrl, int id)
 		id, start_addr, end_addr);
 
 	return 0;
+}
+
+int s3cfb_set_alpha_value_width(struct s3cfb_global *ctrl, int id)
+{
+       struct fb_info *fb = ctrl->fb[id];
+       struct fb_var_screeninfo *var = &fb->var;
+
+       if (var->bits_per_pixel == 32 && var->transp.length > 0)
+               writel(1, ctrl->regs + S3C_BLENDCON);
+       else
+               writel(0, ctrl->regs + S3C_BLENDCON);
+
 }
 
 int s3cfb_set_alpha_blending(struct s3cfb_global *ctrl, int id)
