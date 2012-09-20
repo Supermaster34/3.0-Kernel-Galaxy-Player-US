@@ -300,6 +300,16 @@ config S5PV210_SETUP_FIMC2
 	help
 	  Common setup code for FIMC controller 2.
 
+config DVFS_LIMIT
+  bool "DVFS limit"
+  depends on CPU_FREQ
+  default n
+
+config CPU_DIDLE
+  bool "DEEP Idle"
+  depends on CPU_IDLE
+  default n
+
 config WIFI_CONTROL_FUNC
        bool "Enable WiFi control function abstraction"
        help

@@ -305,9 +305,12 @@ static struct s3c2410_uartcfg aries_uartcfgs[] __initdata = {
 	},
 };
 
-static struct s3cfb_lcd hx8369 = {
-	.width = 480,
-	.height = 800,
+#define S5PV210_LCD_WIDTH 480
+#define S5PV210_LCD_HEIGHT 800
+
+static struct s3cfb_lcd s6e63m0 = {
+        .width = S5PV210_LCD_WIDTH,
+        .height = S5PV210_LCD_HEIGHT,
 	.p_width = 52,
 	.p_height = 86,
 	.bpp = 24,
@@ -359,7 +362,9 @@ static struct s3cfb_lcd hx8369 = {
 #define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC0 (36864 * SZ_1K)
 #define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC1 (36864 * SZ_1K)
 #endif
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMD (3000 * SZ_1K)
+#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMD (S5PV210_LCD_WIDTH * \
+                                             S5PV210_LCD_HEIGHT * 4 * \
+                                             CONFIG_FB_S3C_NR_BUFFERS)
 #define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_JPEG (5012 * SZ_1K)
 #define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_PMEM (5550 * SZ_1K)
 #define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_GPU1 (3300 * SZ_1K)
@@ -3422,7 +3427,7 @@ static struct s3c_platform_camera s5ka3dfx = {
 static struct s3c_platform_fimc fimc_plat_lsi = {
 	.srclk_name	= "mout_mpll",
 	.clk_name	= "sclk_fimc",
-	.lclk_name	= "sclk_fimc_lclk",
+	.lclk_name	= "fimc",
 	.clk_rate	= 166750000,
 	.default_cam	= CAMERA_PAR_A,
 	.camera		= {
@@ -3765,7 +3770,9 @@ static int gp2a_light_adc_value(void)
 static struct gp2a_platform_data gp2a_pdata = {
 	.power = gp2a_power,
 	.p_out = GPIO_PS_VOUT,
-	.light_adc_value = gp2a_light_adc_value
+	.light_adc_value = gp2a_light_adc_value,
+ 	.light_adc_max = 4095,
+ 	.light_adc_fuzz = 64,
 };
 
 static struct i2c_board_info i2c_devs11[] __initdata = {
@@ -4060,6 +4067,35 @@ static struct platform_device sec_device_jack = {
 };  
 #endif
 #define S5PV210_PS_HOLD_CONTROL_REG (S3C_VA_SYS+0xE81C)
+static void aries_power_off(void)
+{
+	while (1) {
+		/* Check reboot charging */
+		if (set_cable_status) {
+			/* watchdog reset */
+			pr_info("%s: charger connected, rebooting\n", __func__);
+			writel(3, S5P_INFORM6);
+			arch_reset('r', NULL);
+			pr_crit("%s: waiting for reset!\n", __func__);
+			while (1);
+		}
+
+		/* wait for power button release */
+		if (gpio_get_value(GPIO_nPOWER)) {
+			pr_info("%s: set PS_HOLD low\n", __func__);
+
+			/* PS_HOLD high  PS_HOLD_CONTROL, R/W, 0xE010_E81C */
+			writel(readl(S5PV210_PS_HOLD_CONTROL_REG) & 0xFFFFFEFF,
+			       S5PV210_PS_HOLD_CONTROL_REG);
+
+			pr_crit("%s: should not reach here!\n", __func__);
+		}
+
+		/* if power button is not released, wait and check TA again */
+		pr_info("%s: PowerButton is not released.\n", __func__);
+		mdelay(1000);
+	}
+}
 
 static void config_gpio_table(int array_size, unsigned int (*gpio_table)[4])
 {
@@ -4363,7 +4399,7 @@ static struct platform_device *aries_devices[] __initdata = {
 	&s3c_device_g3d,
 	&s3c_device_lcd,
 
-	&s3c_device_spi_gpio,
+	//TEMPJON&s3c_device_spi_gpio,
 
 	&sec_device_jack,
 
@@ -4603,7 +4639,7 @@ static void __init aries_machine_init(void)
 	/* Find out S5PC110 chip version */
 	_hw_version_check();
 
-	//TEMP-pm_power_off = aries_power_off ;
+	pm_power_off = aries_power_off ;
 
 	s3c_gpio_cfgpin(GPIO_HWREV_MODE0, S3C_GPIO_INPUT);
 	s3c_gpio_setpull(GPIO_HWREV_MODE0, S3C_GPIO_PULL_NONE);
@@ -4860,15 +4896,6 @@ MACHINE_START(SMDKC110, "SMDKC110")
 #else
 	.timer          = &s5p_timer,
 #endif
-MACHINE_END
-
-MACHINE_START(VENTURI, "SMDKC110")
-	.boot_params	= S5P_PA_SDRAM + 0x100,
-	.fixup		= aries_fixup,
-	.init_irq	= s5pv210_init_irq,
-	.map_io		= aries_map_io,
-	.init_machine	= aries_machine_init,
-	.timer		= &s5p_systimer,
 MACHINE_END
 
 void s3c_setup_uart_cfg_gpio(unsigned char port)

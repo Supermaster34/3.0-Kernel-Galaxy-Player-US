@@ -150,17 +150,3 @@ config FB_S3C_CMC623
 	default "0"
 	---help---
 	This enables support for Samsung CMC623 feature
-
-config FB_S3C_HX8369
-	bool "HX8369"
-	depends on FB_S3C && (ARCH_S5PV210)
-	default "0"
-	---help---
-	This enables support for HX8369 feature
-
-config FB_S3C_HX8369_ACL
-	bool "HX8369(ACL)"
-	depends on FB_S3C_HX8369
-	default y
-	---help---
-	  This enables support for HX8369 WVGA LCD panel to enable ACL feature.

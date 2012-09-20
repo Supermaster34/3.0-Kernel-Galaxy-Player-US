@@ -231,12 +231,7 @@ struct s3cfb_global {
 	struct regulator	*vlcd;
 	int			irq;
 	struct fb_info		**fb;
-
-	wait_queue_head_t	vsync_wq;
-	ktime_t			vsync_timestamp;
-
-	int			vsync_state;
-	struct task_struct	*vsync_thread;
+	struct completion	fb_complete;
 
 	/* fimd */
 	int			enabled;
@@ -348,7 +343,6 @@ extern int s3cfb_window_off(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_win_map_on(struct s3cfb_global *ctrl, int id, int color);
 extern int s3cfb_win_map_off(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_window_control(struct s3cfb_global *ctrl, int id);
-extern int s3cfb_set_alpha_value_width(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_alpha_blending(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_window_position(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_window_size(struct s3cfb_global *ctrl, int id);
@@ -363,10 +357,10 @@ extern void s3cfb_late_resume(struct early_suspend *h);
 #endif
 #endif
 
-#if defined(CONFIG_FB_S3C_HX8369)
-extern void hx8369_ldi_init(void);
-extern void hx8369_ldi_enable(void);
-extern void hx8369_ldi_disable(void);
+#if defined(CONFIG_FB_S3C_TL2796)
+extern void tl2796_ldi_init(void);
+extern void tl2796_ldi_enable(void);
+extern void tl2796_ldi_disable(void);
 extern void lcd_cfg_gpio_early_suspend(void);
 extern void lcd_cfg_gpio_late_resume(void);
 #endif
