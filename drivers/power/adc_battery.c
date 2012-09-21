@@ -27,8 +27,7 @@
 #include <linux/wakelock.h>
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
-#include <mach/battery.h>
-#include <mach/gpio-venturi.h>
+#include <linux/mfd/max8998.h>
 #include <plat/gpio-cfg.h>
 #include <linux/earlysuspend.h>
 #include <linux/io.h>
@@ -213,10 +212,13 @@ static enum power_supply_property s3c_battery_properties[] = {
 	POWER_SUPPLY_PROP_CAPACITY,
 };
 
-static int get_usb_power_state(void)
-{
-	return 0;
-}
+static enum power_supply_property s3c_power_properties[] = {
+	POWER_SUPPLY_PROP_ONLINE,
+};
+
+static char *supply_list[] = {
+	"battery",
+};
 
 static struct power_supply s3c_power_supplies[] = {
 	{
@@ -248,7 +250,7 @@ static struct power_supply s3c_power_supplies[] = {
 
 #define SEC_BATTERY_ATTR(_name)                             \
 {                                           \
-		.attr = { .name = #_name, .mode = 0664, .owner = THIS_MODULE },    \
+		.attr = { .name = #_name, .mode = 0664 },    \
 		.show = s3c_bat_show_property,                          \
 		.store = s3c_bat_store,                             \
 }
@@ -479,7 +481,7 @@ EXPORT_SYMBOL(isVoiceCall);
 #ifdef __TEST_DEVICE_DRIVER__
 #define SEC_TEST_ATTR(_name)                                \
 {                                           \
-	.attr = { .name = #_name, .mode = S_IRUGO | S_IWUGO, .owner = THIS_MODULE },    \
+	.attr = { .name = #_name, .mode = S_IRUGO | S_IWUGO },    \
 	.show = s3c_test_show_property,                         \
 	.store = s3c_test_store,                            \
 }
@@ -948,138 +950,6 @@ static void s3c_bat_set_compesation(int mode, int offset, int compensate_value)
 	pr_info("[BAT]:%s: device_state=0x%x, compensation=%d\n", __func__, s3c_bat_info.device_state, batt_compensation);
 
 }
-#else /* __FUEL_GAUGES_IC__ */
-static int s3c_get_bat_level(struct power_supply *bat_ps)
-{
-	int fg_soc = -1;
-	int fg_vcell = -1;
-
-	fg_soc = fg_read_soc();
-	if (fg_soc < 0) {
-		dev_err(dev, "%s: Can't read soc!!!\n", __func__);
-		fg_soc = s3c_bat_info.bat_info.level;
-	}
-
-	fg_vcell = fg_read_vcell();
-	if (fg_vcell < 0) {
-		dev_err(dev, "%s: Can't read vcell!!!\n", __func__);
-		fg_vcell = s3c_bat_info.bat_info.batt_vol;
-	} else
-		s3c_bat_info.bat_info.batt_vol = fg_vcell;
-
-	if (is_over_abs_time()) {
-		fg_soc = 100;
-		s3c_bat_info.bat_info.batt_is_full = 1;
-		dev_info(dev, "%s: charging time is over\n", __func__);
-		s3c_set_chg_en(0);
-		goto __end__;
-	}
-
-	if (fg_soc > 80) {
-		fg_soc += (fg_soc - 80) * 2;
-		if (fg_soc > 100)
-			fg_soc = 100;
-	}
-#ifdef __CHECK_CHG_CURRENT__
-	if (fg_vcell >= FULL_CHARGE_COND_VOLTAGE) {
-		if (s3c_bat_info.bat_info.charging_enabled) {
-			check_chg_current(bat_ps);
-			if (s3c_bat_info.bat_info.batt_is_full)
-				fg_soc = 100;
-		}
-	}
-#endif /* __CHECK_CHG_CURRENT__ */
-#ifdef __ADJUST_RECHARGE_ADC__
-	check_recharging_bat(fg_vcell);
-#endif /* __ADJUST_RECHARGE_ADC__ */
-	if (fg_vcell <= RECHARGE_COND_VOLTAGE)
-		if (s3c_bat_info.bat_info.batt_is_full &&
-			!s3c_bat_info.bat_info.charging_enabled) {
-			dev_info(dev, "%s: recharging(under full)\n", __func__);
-			s3c_bat_info.bat_info.batt_is_recharging = 1;
-			s3c_set_chg_en(1);
-		}
-
-__end__:
-	dev_dbg(dev, "%s: fg_vcell = %d, fg_soc = %d, is_full = %d\n",
-			__func__, fg_vcell, fg_soc,
-			s3c_bat_info.bat_info.batt_is_full);
-	return fg_soc;
-}
-
-static int s3c_get_bat_vol(struct power_supply *bat_ps)
-{
-	return s3c_bat_info.bat_info.batt_vol;
-}
-#endif /* __FUEL_GAUGES_IC__ */
-
-#ifdef __BOARD_REV_ADC__
-static void s3c_get_board_rev_adc(struct power_supply *bat_ps)
-{
-	static unsigned int cnt = 1;
-	int adc = 0;
-
-	adc = s3c_bat_get_adc_data(S3C_ADC_BOARD_REV);
-	board_rev_adc = calculate_average_adc(S3C_ADC_BOARD_REV, adc);
-	dev_dbg(dev, "%s: adc=%d, avg_adc=%d\n", __func__, adc, board_rev_adc);
-
-	if (++cnt >= 10)
-		is_end_board_rev_adc = 1;
-}
-#endif /* __BOARD_REV_ADC__ */
-
-#if (defined __TEST_MODE_INTERFACE__ && defined __BATTERY_V_F__)
-static void s3c_get_v_f_adc(void)
-{
-	s3c_bat_info.bat_info.batt_v_f_adc
-		= s3c_bat_get_adc_data(S3C_ADC_V_F);
-	dev_info(dev, "%s: vf=%d\n", __func__,
-			s3c_bat_info.bat_info.batt_v_f_adc);
-}
-#endif /* __TEST_MODE_INTERFACE__ && __BATTERY_V_F__ */
-
-static u32 s3c_get_bat_health(void)
-{
-	return s3c_bat_info.bat_info.batt_health;
-}
-
-static void s3c_set_bat_health(u32 batt_health)
-{
-	s3c_bat_info.bat_info.batt_health = batt_health;
-}
-
-static void s3c_set_time_for_charging(int mode)
-{
-	if (mode) {
-		/* record start time for abs timer */
-		start_time_msec = jiffies_to_msecs(jiffies);
-		dev_info(dev, "%s: start_time(%d)\n", __func__,
-				start_time_msec);
-	} else {
-		/* initialize start time for abs timer */
-		start_time_msec = 0;
-		total_time_msec = 0;
-		dev_info(dev, "%s: reset abs timer\n", __func__);
-	}
-}
-
-static void s3c_set_chg_en(int enable)
-{
-	int chg_en_val = 0;
-
-	if (enable) {
-		if (chg_en_val) {
-			s3c_set_time_for_charging(1);
-#ifdef __BATTERY_COMPENSATION__
-			s3c_bat_set_compesation(1, OFFSET_TA_ATTACHED,
-							COMPENSATE_TA);
-#endif /* __BATTERY_COMPENSATION__ */
-		}
-	} else {
-		s3c_set_time_for_charging(0);
-		s3c_bat_info.bat_info.batt_is_recharging = 0;
-#ifdef __BATTERY_COMPENSATION__
-		s3c_bat_set_compesation(0, OFFSET_TA_ATTACHED, COMPENSATE_TA);
 #endif /* __BATTERY_COMPENSATION__ */
 
 #if 0
@@ -3057,9 +2927,8 @@ static void s3c_bat_check_v_f(void)
 		s3c_bat_info.bat_info.batt_v_f_adc = 0;
 		s3c_bat_info.present = 0;
 	} else {
-		/* give userspace some time to see the uevent and update
-		 * LED state or whatnot...
-		 */
+		s3c_bat_info.bat_info.batt_v_f_adc = 1;
+		s3c_bat_info.present = 1;
 	}
 }
 #endif /* __CHECK_BATTERY_V_F__ */
@@ -3158,24 +3027,27 @@ static void s3c_bat_work(struct work_struct *work)
 		return;
 	}
 
-	if (s3c_get_bat_health() != POWER_SUPPLY_HEALTH_GOOD) {
-		dev_info(dev, "%s: Unhealth battery state\n", __func__);
-		status = CHARGER_DISCHARGE;
-		s3c_set_chg_en(0);
-		goto __end__;
+	wake_lock(&update_wake_lock);
+	mutex_lock(&work_lock);
+
+	s3c_store_bat_old_data();
+	s3c_get_bat_temp();
+	s3c_bat_check_v_f();
+	s3c_get_bat_vol();
+	s3c_get_bat_level();
+	s3c_cable_check_status();	/* it is helth related function, We have to update once atfer checking temperature, c_f and fg_i2c_read_error. */
+#ifdef __CHECK_CHG_CURRENT__
+	s3c_check_chg_current();
+#endif /* __CHECK_CHG_CURRENT__ */
+	s3c_bat_charging_control();
+	s3c_cable_status_update();
+	s3c_bat_status_update();
+
+	/* If we're on AC, start running the stepcharger state machine */
+	if (s3c_bat_info.cable_status== CABLE_TYPE_AC) {
+	  stepcharger_statemachine();
 	}
 
-	if (get_usb_power_state())
-		status = CHARGER_USB;
-	else
-		status = CHARGER_AC;
-
-	s3c_set_chg_en(1);
-	dev_info(dev, "%s: status : %s\n", __func__,
-			(status == CHARGER_USB) ? "USB" : "AC");
-
-__end__:
-	s3c_cable_status_update(status);
 	mutex_unlock(&work_lock);
 	wake_unlock(&update_wake_lock);
 }
@@ -3586,8 +3458,8 @@ static int __devexit s3c_bat_remove(struct platform_device *pdev)
 }
 
 static struct platform_driver s3c_bat_driver = {
-	.name = DRIVER_NAME,
-	.owner = THIS_MODULE,
+	.driver.name = DRIVER_NAME,
+	.driver.owner = THIS_MODULE,
 	.probe = s3c_bat_probe,
 	.remove = __devexit_p(s3c_bat_remove),
 	.suspend = s3c_bat_suspend,

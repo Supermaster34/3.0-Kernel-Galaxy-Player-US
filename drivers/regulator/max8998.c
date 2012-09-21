@@ -47,11 +47,28 @@ struct max8998_data {
 	unsigned int		gpio_reset_val;
 };
 
+struct i2c_client	*max8998_client;
+
 struct voltage_map_desc {
 	int min;
 	int max;
 	int step;
 };
+
+u8 max8998_cache_regs[0x40] = {
+	0xFF, 0xFF, 0xFF, 0xFF,
+	0xFF, 0xFF, 0xFF, 0xFF,
+	0xFF, 0xFF, 0xFF, 0xFF,
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
+        0xED, 0xB8, 0x00, 0xF9, //0x11
+        0x12, 0xFF, 0xFF, 0xFF, //0x15
+        0x12, 0x12, 0x02, 0x04, //0x19
+        0x88, 0x02, 0x02, 0x02, //0x1D
+	0x02, 0x30, 0xAC, 0x0A, //0x21
+	0x14, 0x06, 0x10, 0x11,//0x25
+	0x11, 0x01, 0x17, 0x14,//0x29
+};
+
 
 /* Voltage maps */
 static const struct voltage_map_desc ldo23_voltage_map_desc = {
@@ -791,6 +808,7 @@ static __devinit int max8998_pmic_probe(struct platform_device *pdev)
 	max8998->num_regulators = pdata->num_regulators;
 	platform_set_drvdata(pdev, max8998);
 	i2c = max8998->iodev->i2c;
+	max8998_client = i2c;
 
 	max8998->buck1_idx = DVSARMREG(pdata->buck1_default_idx);
 	max8998->buck2_idx = pdata->buck2_default_idx;
@@ -1021,3 +1039,7 @@ module_exit(max8998_pmic_cleanup);
 MODULE_DESCRIPTION("MAXIM 8998 voltage regulator driver");
 MODULE_AUTHOR("Kyungmin Park <kyungmin.park@samsung.com>");
 MODULE_LICENSE("GPL");
+
+#ifdef CONFIG_BATTERY_ADC
+#include "max8998_function.c"
+#endif

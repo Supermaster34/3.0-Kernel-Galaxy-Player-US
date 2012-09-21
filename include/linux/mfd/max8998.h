@@ -84,6 +84,7 @@ struct max8998_charger_callbacks {
 	void (*set_cable)(struct max8998_charger_callbacks *ptr,
 		enum cable_type_t status);
 	bool (*set_esafe)(struct max8998_charger_callbacks *ptr, u8 esafe);
+	bool (*get_vdcin)(struct max8998_charger_callbacks *ptr);
 };
 
 /**
