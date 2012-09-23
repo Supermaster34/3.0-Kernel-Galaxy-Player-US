@@ -30,6 +30,7 @@
 #include <linux/input.h>
 #include <linux/irq.h>
 #include <linux/skbuff.h>
+#include <linux/console.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
@@ -126,9 +127,9 @@
 #include <mach/sec_battery.h>
 #include <mach/max8998_function.h>
 
-#ifdef CONFIG_KERNEL_DEBUG_SEC
+//#ifdef CONFIG_KERNEL_DEBUG_SEC
 #include <linux/kernel_sec_common.h>
-#endif
+//#endif
 
 #include "aries.h"
 
@@ -4093,6 +4094,35 @@ static struct platform_device sec_device_jack = {
 };  
 #endif
 #define S5PV210_PS_HOLD_CONTROL_REG (S3C_VA_SYS+0xE81C)
+static void aries_power_off(void)
+{
+	while (1) {
+		/* Check reboot charging */
+		if (set_cable_status) {
+			/* watchdog reset */
+			pr_info("%s: charger connected, rebooting\n", __func__);
+			writel(3, S5P_INFORM6);
+			arch_reset('r', NULL);
+			pr_crit("%s: waiting for reset!\n", __func__);
+			while (1);
+		}
+
+		/* wait for power button release */
+		if (gpio_get_value(GPIO_nPOWER)) {
+			pr_info("%s: set PS_HOLD low\n", __func__);
+
+			/* PS_HOLD high  PS_HOLD_CONTROL, R/W, 0xE010_E81C */
+			writel(readl(S5PV210_PS_HOLD_CONTROL_REG) & 0xFFFFFEFF,
+			       S5PV210_PS_HOLD_CONTROL_REG);
+
+			pr_crit("%s: should not reach here!\n", __func__);
+		}
+
+		/* if power button is not released, wait and check TA again */
+		pr_info("%s: PowerButton is not released.\n", __func__);
+		mdelay(1000);
+	}
+}
 
 static void config_gpio_table(int array_size, unsigned int (*gpio_table)[4])
 {
@@ -4640,7 +4670,7 @@ static void __init aries_machine_init(void)
 	/* Find out S5PC110 chip version */
 	_hw_version_check();
 
-	//TEMP-pm_power_off = aries_power_off ;
+	pm_power_off = aries_power_off ;
 
 	s3c_gpio_cfgpin(GPIO_HWREV_MODE0, S3C_GPIO_INPUT);
 	s3c_gpio_setpull(GPIO_HWREV_MODE0, S3C_GPIO_PULL_NONE);

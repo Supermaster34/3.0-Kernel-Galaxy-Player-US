@@ -38,6 +38,7 @@ obj-$(CONFIG_MACH_HERRING)	+= dev-herring-phone.o
 
 # Venturi Support.
 obj-$(CONFIG_MACH_VENTURI)	+= mach-venturi.o aries-rfkill.o
+#obj-$(CONFIG_MACH_VENTURI)	+= venturi_reboot.o
 obj-$(CONFIG_MACH_VENTURI)	+= aries-watchdog.o
 obj-$(CONFIG_MACH_VENTURI)	+= aries-panel.o
 obj-$(CONFIG_MACH_VENTURI)	+= sec_switch.o
