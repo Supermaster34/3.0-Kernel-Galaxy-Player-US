@@ -93,6 +93,9 @@ source "sound/mips/Kconfig"
 
 source "sound/sh/Kconfig"
 
+# S5PC110 SRP Driver
+source "sound/s5p-rp/Kconfig"
+
 # the following will depend on the order of config.
 # here assuming USB is defined before ALSA
 source "sound/usb/Kconfig"

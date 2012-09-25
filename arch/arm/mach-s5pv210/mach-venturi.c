@@ -4170,12 +4170,10 @@ void config_sleep_gpio(void)
 	printk(KERN_DEBUG "SLPGPIO : BT(%d) WLAN(%d) BT+WIFI(%d)\n",
 		gpio_get_value(GPIO_BT_nRST), gpio_get_value(GPIO_WLAN_nRST), gpio_get_value(GPIO_WLAN_BT_EN));
 
-/*
 #if !defined(CONFIG_SND_SMDKC110_MC1N2)
 	printk(KERN_DEBUG "SLPGPIO : CODEC_LDO_EN(%d) MICBIAS_EN(%d) GPIO_MICBIAS_EN2(%d)\n",
 		gpio_get_value(GPIO_CODEC_LDO_EN), gpio_get_value(GPIO_MICBIAS_EN), gpio_get_value(GPIO_MICBIAS_EN2));
 #endif
-*/
 
 #if defined(CONFIG_OPTICAL_GP2A)
 	printk(KERN_DEBUG "SLPGPIO : PS_ON(%d) FM_RST(%d) UART_SEL(%d)\n",
@@ -4645,12 +4643,10 @@ static void __init sound_init(void)
 	reg |= 0x1;
 	__raw_writel(reg, S5P_CLK_OUT);
 
-/*
 #if !defined(CONFIG_SND_SMDKC110_MC1N2)
 	gpio_request(GPIO_MICBIAS_EN, "micbias_enable");
 	gpio_request(GPIO_MICBIAS_EN2, "sub_micbias_enable");
 #endif
-*/
 	gpio_request(GPIO_MUTE_ON, "earpath_enable");
 }
 

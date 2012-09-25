@@ -10,6 +10,12 @@ snd-soc-pcm-objs := pcm.o
 snd-soc-i2s-objs := i2s.o
 
 obj-$(CONFIG_SND_SOC_SAMSUNG) += snd-soc-s3c24xx.o
+
+obj-$(CONFIG_SND_S5PC1XX_SOC_I2S) += snd-soc-s3c-idma.o
+obj-$(CONFIG_SND_S5PC1XX_SOC_I2S) += snd-soc-s3c-dma-wrapper.o
+obj-$(CONFIG_SND_S5PC1XX_SOC_I2S) += snd-soc-s5pc1xx-i2s.o
+obj-$(CONFIG_SND_S5PC1XX_SOC_I2S) += snd-soc-s5p-i2s_sec.o
+
 obj-$(CONFIG_SND_S3C24XX_I2S) += snd-soc-s3c24xx-i2s.o
 obj-$(CONFIG_SND_SAMSUNG_AC97) += snd-soc-ac97.o
 obj-$(CONFIG_SND_S3C2412_SOC_I2S) += snd-soc-s3c2412-i2s.o
@@ -51,6 +57,9 @@ obj-$(CONFIG_SND_SOC_SAMSUNG_SIMTEC_HERMES) += snd-soc-s3c24xx-simtec-hermes.o
 obj-$(CONFIG_SND_SOC_SAMSUNG_SIMTEC_TLV320AIC23) += snd-soc-s3c24xx-simtec-tlv320aic23.o
 obj-$(CONFIG_SND_SOC_SAMSUNG_H1940_UDA1380) += snd-soc-h1940-uda1380.o
 obj-$(CONFIG_SND_SOC_SAMSUNG_HERRING_WM8994)  += snd-soc-herring-wm8994.o
+
+obj-$(CONFIG_SND_SMDKC110_MC1N2)  += snd-soc-s5pc1xx-mc1n2.o
+
 obj-$(CONFIG_SND_SOC_SAMSUNG_RX1950_UDA1380) += snd-soc-rx1950-uda1380.o
 obj-$(CONFIG_SND_SOC_SAMSUNG_SMDK_WM8580) += snd-soc-smdk-wm8580.o
 obj-$(CONFIG_SND_SOC_SAMSUNG_SMDK_WM8994) += snd-soc-smdk-wm8994.o
