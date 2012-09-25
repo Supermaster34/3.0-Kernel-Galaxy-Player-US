@@ -101,6 +101,9 @@ extern int s3c2410_dma_free(enum dma_ch channel, struct s3c2410_dma_client *);
 extern int s3c2410_dma_enqueue(enum dma_ch channel, void *id,
 			       dma_addr_t data, int size);
 
+extern int s3c2410_dma_enqueue_autoload(unsigned int channel, void *id,
+			       dma_addr_t data, int size, int num);
+
 /* s3c2410_dma_config
  *
  * configure the dma channel

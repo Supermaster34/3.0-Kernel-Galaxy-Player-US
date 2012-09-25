@@ -25,13 +25,11 @@ Common Linux HPI ioctl and module probe/remove functions
 #include "hpidebug.h"
 #include "hpimsgx.h"
 #include "hpioctl.h"
-#include "hpicmn.h"
 
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/moduleparam.h>
 #include <asm/uaccess.h>
-#include <linux/pci.h>
 #include <linux/stringify.h>
 
 #ifdef MODULE_FIRMWARE
@@ -47,7 +45,7 @@ MODULE_FIRMWARE("asihpi/dsp8900.bin");
 static int prealloc_stream_buf;
 module_param(prealloc_stream_buf, int, S_IRUGO);
 MODULE_PARM_DESC(prealloc_stream_buf,
-	"Preallocate size for per-adapter stream buffer");
+	"preallocate size for per-adapter stream buffer");
 
 /* Allow the debug level to be changed after module load.
  E.g.   echo 2 > /sys/module/asihpi/parameters/hpiDebugLevel
@@ -123,21 +121,15 @@ long asihpi_hpi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	phpi_ioctl_data = (struct hpi_ioctl_linux __user *)arg;
 
 	/* Read the message and response pointers from user space.  */
-	if (get_user(puhm, &phpi_ioctl_data->phm)
-		|| get_user(puhr, &phpi_ioctl_data->phr)) {
-		err = -EFAULT;
-		goto out;
-	}
+	get_user(puhm, &phpi_ioctl_data->phm);
+	get_user(puhr, &phpi_ioctl_data->phr);
 
 	/* Now read the message size and data from user space.  */
-	if (get_user(hm->h.size, (u16 __user *)puhm)) {
-		err = -EFAULT;
-		goto out;
-	}
+	get_user(hm->h.size, (u16 __user *)puhm);
 	if (hm->h.size > sizeof(*hm))
 		hm->h.size = sizeof(*hm);
 
-	/* printk(KERN_INFO "message size %d\n", hm->h.wSize); */
+	/*printk(KERN_INFO "message size %d\n", hm->h.wSize); */
 
 	uncopied_bytes = copy_from_user(hm, puhm, hm->h.size);
 	if (uncopied_bytes) {
@@ -146,10 +138,7 @@ long asihpi_hpi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		goto out;
 	}
 
-	if (get_user(res_max_size, (u16 __user *)puhr)) {
-		err = -EFAULT;
-		goto out;
-	}
+	get_user(res_max_size, (u16 __user *)puhr);
 	/* printk(KERN_INFO "user response size %d\n", res_max_size); */
 	if (res_max_size < sizeof(struct hpi_response_header)) {
 		HPI_DEBUG_LOG(WARNING, "small res size %d\n", res_max_size);
@@ -157,29 +146,26 @@ long asihpi_hpi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		goto out;
 	}
 
-	if (hm->h.adapter_index >= HPI_MAX_ADAPTERS) {
-		err = -EINVAL;
-		goto out;
-	}
-
-	switch (hm->h.function) {
-	case HPI_SUBSYS_CREATE_ADAPTER:
-	case HPI_ADAPTER_DELETE:
-		/* Application must not use these functions! */
-		hr->h.size = sizeof(hr->h);
-		hr->h.error = HPI_ERROR_INVALID_OPERATION;
-		hr->h.function = hm->h.function;
-		uncopied_bytes = copy_to_user(puhr, hr, hr->h.size);
-		if (uncopied_bytes)
-			err = -EFAULT;
-		else
-			err = 0;
-		goto out;
-	}
-
-	hr->h.size = res_max_size;
+	pa = &adapters[hm->h.adapter_index];
+	hr->h.size = 0;
 	if (hm->h.object == HPI_OBJ_SUBSYSTEM) {
-		hpi_send_recv_f(&hm->m0, &hr->r0, file);
+		switch (hm->h.function) {
+		case HPI_SUBSYS_CREATE_ADAPTER:
+		case HPI_SUBSYS_DELETE_ADAPTER:
+			/* Application must not use these functions! */
+			hr->h.size = sizeof(hr->h);
+			hr->h.error = HPI_ERROR_INVALID_OPERATION;
+			hr->h.function = hm->h.function;
+			uncopied_bytes = copy_to_user(puhr, hr, hr->h.size);
+			if (uncopied_bytes)
+				err = -EFAULT;
+			else
+				err = 0;
+			goto out;
+
+		default:
+			hpi_send_recv_f(&hm->m0, &hr->r0, file);
+		}
 	} else {
 		u16 __user *ptr = NULL;
 		u32 size = 0;
@@ -187,9 +173,8 @@ long asihpi_hpi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		/* -1=no data 0=read from user mem, 1=write to user mem */
 		int wrflag = -1;
 		u32 adapter = hm->h.adapter_index;
-		pa = &adapters[adapter];
 
-		if ((adapter > HPI_MAX_ADAPTERS) || (!pa->type)) {
+		if ((hm->h.adapter_index > HPI_MAX_ADAPTERS) || (!pa->type)) {
 			hpi_init_response(&hr->r0, HPI_OBJ_ADAPTER,
 				HPI_ADAPTER_OPEN,
 				HPI_ERROR_BAD_ADAPTER_NUMBER);
@@ -222,7 +207,7 @@ long asihpi_hpi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				 */
 				if (pa->buffer_size < size) {
 					HPI_DEBUG_LOG(DEBUG,
-						"Realloc adapter %d stream "
+						"realloc adapter %d stream "
 						"buffer from %zd to %d\n",
 						hm->h.adapter_index,
 						pa->buffer_size, size);
@@ -265,7 +250,7 @@ long asihpi_hpi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				copy_from_user(pa->p_buffer, ptr, size);
 			if (uncopied_bytes)
 				HPI_DEBUG_LOG(WARNING,
-					"Missed %d of %d "
+					"missed %d of %d "
 					"bytes from user\n", uncopied_bytes,
 					size);
 		}
@@ -277,7 +262,7 @@ long asihpi_hpi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				copy_to_user(ptr, pa->p_buffer, size);
 			if (uncopied_bytes)
 				HPI_DEBUG_LOG(WARNING,
-					"Missed %d of %d " "bytes to user\n",
+					"missed %d of %d " "bytes to user\n",
 					uncopied_bytes, size);
 		}
 
@@ -296,9 +281,9 @@ long asihpi_hpi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	if (hr->h.size > res_max_size) {
 		HPI_DEBUG_LOG(ERROR, "response too big %d %d\n", hr->h.size,
 			res_max_size);
-		hr->h.error = HPI_ERROR_RESPONSE_BUFFER_TOO_SMALL;
-		hr->h.specific_error = hr->h.size;
-		hr->h.size = sizeof(hr->h);
+		/*HPI_DEBUG_MESSAGE(ERROR, hm); */
+		err = -EFAULT;
+		goto out;
 	}
 
 	uncopied_bytes = copy_to_user(puhr, hr, hr->h.size);
@@ -317,7 +302,7 @@ out:
 int __devinit asihpi_adapter_probe(struct pci_dev *pci_dev,
 	const struct pci_device_id *pci_id)
 {
-	int idx, nm;
+	int err, idx, nm;
 	unsigned int memlen;
 	struct hpi_message hm;
 	struct hpi_response hr;
@@ -326,33 +311,28 @@ int __devinit asihpi_adapter_probe(struct pci_dev *pci_dev,
 
 	memset(&adapter, 0, sizeof(adapter));
 
-	dev_printk(KERN_DEBUG, &pci_dev->dev,
-		"probe %04x:%04x,%04x:%04x,%04x\n", pci_dev->vendor,
-		pci_dev->device, pci_dev->subsystem_vendor,
+	printk(KERN_DEBUG "probe PCI device (%04x:%04x,%04x:%04x,%04x)\n",
+		pci_dev->vendor, pci_dev->device, pci_dev->subsystem_vendor,
 		pci_dev->subsystem_device, pci_dev->devfn);
-
-	if (pci_enable_device(pci_dev) < 0) {
-		dev_printk(KERN_ERR, &pci_dev->dev,
-			"pci_enable_device failed, disabling device\n");
-		return -EIO;
-	}
-
-	pci_set_master(pci_dev);	/* also sets latency timer if < 16 */
 
 	hpi_init_message_response(&hm, &hr, HPI_OBJ_SUBSYSTEM,
 		HPI_SUBSYS_CREATE_ADAPTER);
 	hpi_init_response(&hr, HPI_OBJ_SUBSYSTEM, HPI_SUBSYS_CREATE_ADAPTER,
 		HPI_ERROR_PROCESSING_MESSAGE);
 
-	hm.adapter_index = HPI_ADAPTER_INDEX_INVALID;
+	hm.adapter_index = -1;	/* an invalid index */
 
+	/* fill in HPI_PCI information from kernel provided information */
 	adapter.pci = pci_dev;
 
 	nm = HPI_MAX_ADAPTER_MEM_SPACES;
 
 	for (idx = 0; idx < nm; idx++) {
-		HPI_DEBUG_LOG(INFO, "resource %d %pR\n", idx,
-			&pci_dev->resource[idx]);
+		HPI_DEBUG_LOG(INFO, "resource %d %s %08llx-%08llx %04llx\n",
+			idx, pci_dev->resource[idx].name,
+			(unsigned long long)pci_resource_start(pci_dev, idx),
+			(unsigned long long)pci_resource_end(pci_dev, idx),
+			(unsigned long long)pci_resource_flags(pci_dev, idx));
 
 		if (pci_resource_flags(pci_dev, idx) & IORESOURCE_MEM) {
 			memlen = pci_resource_len(pci_dev, idx);
@@ -370,7 +350,19 @@ int __devinit asihpi_adapter_probe(struct pci_dev *pci_dev,
 		pci.ap_mem_base[idx] = adapter.ap_remapped_mem_base[idx];
 	}
 
-	pci.pci_dev = pci_dev;
+	/* could replace Pci with direct pointer to pci_dev for linux
+	   Instead wrap accessor functions for IDs etc.
+	   Would it work for windows?
+	 */
+	pci.bus_number = pci_dev->bus->number;
+	pci.vendor_id = (u16)pci_dev->vendor;
+	pci.device_id = (u16)pci_dev->device;
+	pci.subsys_vendor_id = (u16)(pci_dev->subsystem_vendor & 0xffff);
+	pci.subsys_device_id = (u16)(pci_dev->subsystem_device & 0xffff);
+	pci.device_number = pci_dev->devfn;
+	pci.interrupt = pci_dev->irq;
+	pci.p_os_data = pci_dev;
+
 	hm.u.s.resource.bus_type = HPI_BUS_PCI;
 	hm.u.s.resource.r.pci = &pci;
 
@@ -391,27 +383,23 @@ int __devinit asihpi_adapter_probe(struct pci_dev *pci_dev,
 	}
 
 	adapter.index = hr.u.s.adapter_index;
-	adapter.type = hr.u.s.adapter_type;
-
-	hpi_init_message_response(&hm, &hr, HPI_OBJ_ADAPTER,
-		HPI_ADAPTER_OPEN);
+	adapter.type = hr.u.s.aw_adapter_list[adapter.index];
 	hm.adapter_index = adapter.index;
-	hpi_send_recv_ex(&hm, &hr, HOWNER_KERNEL);
 
-	if (hr.error)
+	err = hpi_adapter_open(NULL, adapter.index);
+	if (err)
 		goto err;
 
 	adapter.snd_card_asihpi = NULL;
 	/* WARNING can't init mutex in 'adapter'
 	 * and then copy it to adapters[] ?!?!
 	 */
-	adapters[adapter.index] = adapter;
+	adapters[hr.u.s.adapter_index] = adapter;
 	mutex_init(&adapters[adapter.index].mutex);
 	pci_set_drvdata(pci_dev, &adapters[adapter.index]);
 
-	dev_printk(KERN_INFO, &pci_dev->dev,
-		"probe succeeded for ASI%04X HPI index %d\n", adapter.type,
-		adapter.index);
+	printk(KERN_INFO "probe found adapter ASI%04X HPI index #%d.\n",
+		adapter.type, adapter.index);
 
 	return 0;
 
@@ -438,10 +426,10 @@ void __devexit asihpi_adapter_remove(struct pci_dev *pci_dev)
 	struct hpi_message hm;
 	struct hpi_response hr;
 	struct hpi_adapter *pa;
-	pa = pci_get_drvdata(pci_dev);
+	pa = (struct hpi_adapter *)pci_get_drvdata(pci_dev);
 
-	hpi_init_message_response(&hm, &hr, HPI_OBJ_ADAPTER,
-		HPI_ADAPTER_DELETE);
+	hpi_init_message_response(&hm, &hr, HPI_OBJ_SUBSYSTEM,
+		HPI_SUBSYS_DELETE_ADAPTER);
 	hm.adapter_index = pa->index;
 	hpi_send_recv_ex(&hm, &hr, HOWNER_KERNEL);
 
@@ -453,18 +441,20 @@ void __devexit asihpi_adapter_remove(struct pci_dev *pci_dev)
 		}
 	}
 
-	if (pa->p_buffer)
+	if (pa->p_buffer) {
+		pa->buffer_size = 0;
 		vfree(pa->p_buffer);
+	}
 
 	pci_set_drvdata(pci_dev, NULL);
-	if (1)
-		dev_printk(KERN_INFO, &pci_dev->dev,
-			"remove %04x:%04x,%04x:%04x,%04x," " HPI index %d.\n",
-			pci_dev->vendor, pci_dev->device,
-			pci_dev->subsystem_vendor, pci_dev->subsystem_device,
-			pci_dev->devfn, pa->index);
-
-	memset(pa, 0, sizeof(*pa));
+	/*
+	   printk(KERN_INFO "PCI device (%04x:%04x,%04x:%04x,%04x),"
+	   " HPI index # %d, removed.\n",
+	   pci_dev->vendor, pci_dev->device,
+	   pci_dev->subsystem_vendor,
+	   pci_dev->subsystem_device, pci_dev->devfn,
+	   pa->index);
+	 */
 }
 
 void __init asihpi_init(void)
@@ -474,7 +464,9 @@ void __init asihpi_init(void)
 
 	memset(adapters, 0, sizeof(adapters));
 
-	printk(KERN_INFO "ASIHPI driver " HPI_VER_STRING "\n");
+	printk(KERN_INFO "ASIHPI driver %d.%02d.%02d\n",
+		HPI_VER_MAJOR(HPI_VER), HPI_VER_MINOR(HPI_VER),
+		HPI_VER_RELEASE(HPI_VER));
 
 	hpi_init_message_response(&hm, &hr, HPI_OBJ_SUBSYSTEM,
 		HPI_SUBSYS_DRIVER_LOAD);
