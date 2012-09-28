@@ -1938,6 +1938,7 @@ void s3c_cable_changed(bool connected)
 
 extern byte Get_MAX8998_PM_REG(max8998_pm_section_type reg_num);
 
+/*
 void s3c_set_cable_cb(struct max8998_charger_callbacks *ptr, enum cable_type_t status)
 {
 	printk("s3c_set_cable_cb(%d, %d)\n", status, Get_MAX8998_PM_REG(VDCINOK_status));
@@ -1945,7 +1946,7 @@ void s3c_set_cable_cb(struct max8998_charger_callbacks *ptr, enum cable_type_t s
 		(!Get_MAX8998_PM_REG(VDCINOK_status) && (status == CABLE_TYPE_NONE)))
 		s3c_cable_changed(status != CABLE_TYPE_NONE);
 }
-
+*/
 
 #if 0 /* eur-feature */
 void s3c_cable_charging(void)
@@ -3401,7 +3402,7 @@ static int __devinit s3c_bat_probe(struct platform_device *pdev)
 #endif /* __PSEUDO_BOOT_COMPLETED__ */
 	}
 
-	s3c_bat_info.callbacks.set_cable = s3c_set_cable_cb;
+	//s3c_bat_info.callbacks.set_cable = s3c_set_cable_cb;
 	s3c_bat_info.callbacks.set_esafe = NULL;
 	s3c_bat_info.callbacks.get_vdcin = NULL;
 	if (s3c_bat_info.pdata->register_callbacks)
