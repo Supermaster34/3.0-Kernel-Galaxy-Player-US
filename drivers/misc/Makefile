@@ -49,6 +49,10 @@ obj-y				+= lis3lv02d/
 obj-y				+= carma/
 obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o
 obj-$(CONFIG_APANIC)		+= apanic.o
+
+obj-$(CONFIG_SENSORS_BMA222)	+= bma023_dev.o bma_accel_driver.o bma222.o
+obj-$(CONFIG_SENSORS_MMC328X)	+= mmc328x.o
+
 obj-$(CONFIG_SENSORS_AK8973)	+= ak8973.o
 obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
 obj-$(CONFIG_SENSORS_KR3DM)	+= kr3dm.o

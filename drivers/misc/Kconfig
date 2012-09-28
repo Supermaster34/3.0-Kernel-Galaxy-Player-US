@@ -353,6 +353,21 @@ config SENSORS_TSL2550
 	  This driver can also be built as a module.  If so, the module
 	  will be called tsl2550.
 
+config SENSORS_BMA222
+	tristate "BMA acceleration sensor support"
+	depends on I2C=y
+	default y
+	help
+	  If you say yes here you get support for Bosch Sensortec's 
+	  acceleration sensors BMA.  
+
+config SENSORS_MMC328X
+	tristate "MEMSIC Magnetic Sensor Driver Support"
+	depends on I2C
+	default y
+	help
+	  If you say yes here you get support for the MEMSIC magnateic sensor
+
 config SENSORS_BH1780
 	tristate "ROHM BH1780GLI ambient light sensor"
 	depends on I2C && SYSFS
