@@ -4539,11 +4539,11 @@ static void __init aries_map_io(void)
 	s3c24xx_init_clocks(24000000);
 	s5pv210_gpiolib_init();
 	s3c24xx_init_uarts(aries_uartcfgs, ARRAY_SIZE(aries_uartcfgs));
-#ifndef CONFIG_S5P_HIGH_RES_TIMERS
-        s5p_set_timer_source(S5P_PWM3, S5P_PWM4);
-#endif
-        s5p_reserve_bootmem(aries_media_devs,
-                        ARRAY_SIZE(aries_media_devs), S5P_RANGE_MFC);
+	#ifndef CONFIG_S5P_HIGH_RES_TIMERS
+		s5p_set_timer_source(S5P_PWM3, S5P_PWM4);
+	#endif
+	s5p_reserve_bootmem(aries_media_devs,
+		ARRAY_SIZE(aries_media_devs), S5P_RANGE_MFC);
 #ifdef CONFIG_MTD_ONENAND
 	s5p_device_onenand.name = "s5pc110-onenand";
 #endif
@@ -4916,26 +4916,17 @@ void usb_host_phy_off(void)
 EXPORT_SYMBOL(usb_host_phy_off);
 #endif
 
-MACHINE_START(SMDKC110, "SMDKC110")
+MACHINE_START(VENTURI, "venturi")
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.fixup		= aries_fixup,
 	.init_irq	= s5pv210_init_irq,
 	.map_io		= aries_map_io,
 	.init_machine	= aries_machine_init,
-#ifdef CONFIG_S5P_HIGH_RES_TIMERS
+#if	defined(CONFIG_S5P_HIGH_RES_TIMERS)
 	.timer		= &s5p_systimer,
 #else
-	.timer          = &s5p_timer,
+	.timer		= &s3c24xx_timer,
 #endif
-MACHINE_END
-
-MACHINE_START(VENTURI, "SMDKC110")
-	.boot_params	= S5P_PA_SDRAM + 0x100,
-	.fixup		= aries_fixup,
-	.init_irq	= s5pv210_init_irq,
-	.map_io		= aries_map_io,
-	.init_machine	= aries_machine_init,
-	.timer		= &s5p_systimer,
 MACHINE_END
 
 void s3c_setup_uart_cfg_gpio(unsigned char port)

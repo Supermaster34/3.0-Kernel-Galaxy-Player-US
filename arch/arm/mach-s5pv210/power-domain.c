@@ -41,7 +41,9 @@ struct clk_should_be_running {
 static spinlock_t pd_lock;
 
 static struct regulator_consumer_supply s5pv210_pd_audio_supply[] = {
-	REGULATOR_SUPPLY("pd", "samsung-i2s.0"),
+	REGULATOR_SUPPLY("pd", "s5pc1xx-iis.0"),
+	REGULATOR_SUPPLY("pd", "samsung-pcm.0"),
+	REGULATOR_SUPPLY("pd", "samsung-pcm.1"),
 };
 
 static struct regulator_consumer_supply s5pv210_pd_cam_supply[] = {
@@ -127,7 +129,12 @@ struct clk_should_be_running s5pv210_pd_audio_clk[] = {
 	{
 		.clk_name	= "i2scdclk",
 		.dev		= &s5pv210_device_iis0.dev,
-	}, {
+	},
+	{
+		.clk_name	= "pcm",
+		.dev		= &s5pv210_device_pcm1.dev,
+	},
+	{
 		/* end of the clock array */
 	},
 };
