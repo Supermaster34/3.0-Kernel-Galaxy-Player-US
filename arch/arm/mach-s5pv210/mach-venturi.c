@@ -128,7 +128,7 @@
 #include <mach/max8998_function.h>
 
 //#ifdef CONFIG_KERNEL_DEBUG_SEC
-#include <linux/kernel_sec_common.h>
+//#include <linux/kernel_sec_common.h>
 //#endif
 
 #include "aries.h"
@@ -178,24 +178,14 @@ static int aries_notifier_call(struct notifier_block *this,
 	int mode = REBOOT_MODE_NONE;
 
 	if ((code == SYS_RESTART) && _cmd) {
-		if (!strcmp((char *)_cmd, "arm11_fota"))
-			mode = REBOOT_MODE_ARM11_FOTA;
-		else if (!strcmp((char *)_cmd, "arm9_fota"))
-			mode = REBOOT_MODE_ARM9_FOTA;
-		else if (!strcmp((char *)_cmd, "recovery"))
-			mode = REBOOT_MODE_RECOVERY;
-		else if (!strcmp((char *)_cmd, "bootloader"))
-			mode = REBOOT_MODE_FAST_BOOT;
+		if (!strcmp((char *)_cmd, "recovery"))
+			mode = 2; // It's not REBOOT_MODE_RECOVERY, blame Samsung
 		else if (!strcmp((char *)_cmd, "download"))
-			mode = REBOOT_MODE_DOWNLOAD;
+			mode = 1; // It's not REBOOT_MODE_RECOVERY, blame Samsung
 		else
 			mode = REBOOT_MODE_NONE;
 	}
-	if (code != SYS_POWER_OFF) {
-		if (sec_set_param_value) {
-			sec_set_param_value(__REBOOT_MODE, &mode);
-		}
-	}
+	__raw_writel(mode, S5P_INFORM6);
 
 	return NOTIFY_DONE;
 }
@@ -308,9 +298,12 @@ static struct s3c2410_uartcfg aries_uartcfgs[] __initdata = {
 	},
 };
 
+#define S5PV210_LCD_WIDTH 480
+#define S5PV210_LCD_HEIGHT 800
+
 static struct s3cfb_lcd hx8369 = {
-	.width = 480,
-	.height = 800,
+        .width = S5PV210_LCD_WIDTH,
+        .height = S5PV210_LCD_HEIGHT,
 	.p_width = 52,
 	.p_height = 86,
 	.bpp = 24,
@@ -334,100 +327,69 @@ static struct s3cfb_lcd hx8369 = {
 	},
 };
 
-#if 0
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC0 (14745 * SZ_1K)
+#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC0 (6144 * SZ_1K)
 #define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC1 (9900 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC2 (14745 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC0 (32768 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC1 (32768 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMD (4800 * SZ_1K)
+#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC2 (6144 * SZ_1K)
+#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC0 (36864 * SZ_1K)
+#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC1 (36864 * SZ_1K)
+#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMD (S5PV210_LCD_WIDTH * \
+                                             S5PV210_LCD_HEIGHT * 4 * \
+                                             (CONFIG_FB_S3C_NR_BUFFERS + \
+                                                 (CONFIG_FB_S3C_NUM_OVLY_WIN * \
+                                                  CONFIG_FB_S3C_NUM_BUF_OVLY_WIN)))
 #define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_JPEG (8192 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_PMEM (8192 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_GPU1 (3300 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_ADSP (6144 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_TEXTSTREAM (3000 * SZ_1K)
-#else	// optimized settings, 19th Jan.2011
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC0 (12288 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC1 (9900 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC2 (12288 * SZ_1K)
-#if !defined(CONFIG_ARIES_NTT)   
-#if defined(CONFIG_VENTURI_KOR) // Usys_sadang KH23 support playing 1080p
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC0 (36864 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC1 (36864 * SZ_1K)
-#else    /* NTT - support playing 1080p */
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC0 (32768 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC1 (32768 * SZ_1K)
-#endif
-#else    /* NTT - support playing 1080p */
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC0 (36864 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC1 (36864 * SZ_1K)
-#endif
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMD (3000 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_JPEG (5012 * SZ_1K)
-//#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_PMEM (5550 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_GPU1 (3300 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_ADSP (1500 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_TEXTSTREAM (3000 * SZ_1K)
-#endif
 
 
 static struct s5p_media_device aries_media_devs[] = {
-	[0] = {
-		.id = S5P_MDEV_MFC,
-		.name = "mfc",
-		.bank = 0,
-		.memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC0,
-		.paddr = 0,
-	},
-	[1] = {
-		.id = S5P_MDEV_MFC,
-		.name = "mfc",
-		.bank = 1,
-		.memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC1,
-		.paddr = 0,
-	},
-	[2] = {
-		.id = S5P_MDEV_FIMC0,
-		.name = "fimc0",
-		.bank = 1,
-		.memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC0,
-		.paddr = 0,
-	},
-	[3] = {
-		.id = S5P_MDEV_FIMC1,
-		.name = "fimc1",
-		.bank = 1,
-		.memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC1,
-		.paddr = 0,
-	},
-	[4] = {
-		.id = S5P_MDEV_FIMC2,
-		.name = "fimc2",
-		.bank = 1,
-		.memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC2,
-		.paddr = 0,
-	},
-	[5] = {
-		.id = S5P_MDEV_JPEG,
-		.name = "jpeg",
-		.bank = 0,
-		.memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_JPEG,
-		.paddr = 0,
-	},
-	[6] = {
-		.id = S5P_MDEV_FIMD,
-		.name = "fimd",
-		.bank = 1,
-		.memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMD,
-		.paddr = 0,
-	},	
-	[7] = {
-		.id = S5P_MDEV_TEXSTREAM,
-		.name = "s3c_bc",
-		.bank = 1,
-		.memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_TEXTSTREAM,
-		.paddr = 0,
-	},		
+        [0] = {
+                .id = S5P_MDEV_MFC,
+                .name = "mfc",
+                .bank = 0,
+                .memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC0,
+                .paddr = 0,
+        },
+        [1] = {
+                .id = S5P_MDEV_MFC,
+                .name = "mfc",
+                .bank = 1,
+                .memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC1,
+                .paddr = 0,
+        },
+        [2] = {
+                .id = S5P_MDEV_FIMC0,
+                .name = "fimc0",
+                .bank = 1,
+                .memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC0,
+                .paddr = 0,
+        },
+        [3] = {
+                .id = S5P_MDEV_FIMC1,
+                .name = "fimc1",
+                .bank = 1,
+                .memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC1,
+                .paddr = 0,
+        },
+        [4] = {
+                .id = S5P_MDEV_FIMC2,
+                .name = "fimc2",
+                .bank = 1,
+                .memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC2,
+                .paddr = 0,
+        },
+        [5] = {
+                .id = S5P_MDEV_JPEG,
+                .name = "jpeg",
+                .bank = 0,
+                .memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_JPEG,
+                .paddr = 0,
+        },
+        [6] = {
+                .id = S5P_MDEV_FIMD,
+                .name = "fimd",
+                .bank = 1,
+                .memsize = S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMD,
+                .paddr = 0,
+        },	
 };
 
 #ifdef CONFIG_CPU_FREQ
@@ -4075,17 +4037,30 @@ static struct platform_device sec_device_jack = {
 #define S5PV210_PS_HOLD_CONTROL_REG (S3C_VA_SYS+0xE81C)
 static void aries_power_off(void)
 {
+	int err;
+	int mode = REBOOT_MODE_NONE;
+	char reset_mode = 'r';
+	int phone_wait_cnt = 0;
+
+	/* Change this API call just before power-off to take the dump. */
+	/* kernel_sec_clear_upload_magic_number(); */
+
 	while (1) {
 		/* Check reboot charging */
-		if (set_cable_status) {
+		if (maxim_chg_status()) {
 			/* watchdog reset */
 			pr_info("%s: charger connected, rebooting\n", __func__);
-			writel(3, S5P_INFORM6);
+			mode = REBOOT_MODE_CHARGING;
+			if (sec_set_param_value)
+				sec_set_param_value(__REBOOT_MODE, &mode);
+			//kernel_sec_clear_upload_magic_number();
+			//kernel_sec_hw_reset(1);
 			arch_reset('r', NULL);
 			pr_crit("%s: waiting for reset!\n", __func__);
 			while (1);
 		}
 
+		//kernel_sec_clear_upload_magic_number();
 		/* wait for power button release */
 		if (gpio_get_value(GPIO_nPOWER)) {
 			pr_info("%s: set PS_HOLD low\n", __func__);
@@ -4640,8 +4615,50 @@ static void __init onenand_init()
 	clk_enable(clk);
 }
 
+static bool console_flushed;
+
+static void flush_console(void)
+{
+	if (console_flushed)
+		return;
+
+	console_flushed = true;
+
+	printk("\n");
+	pr_emerg("Restarting %s\n", linux_banner);
+	if (!is_console_locked())
+		return;
+
+	mdelay(50);
+
+	local_irq_disable();
+	if (console_trylock())
+		pr_emerg("flush_console: console was locked! busting!\n");
+	else
+		pr_emerg("flush_console: console was locked!\n");
+	console_unlock();
+}
+
+static void aries_pm_restart(char mode, const char *cmd)
+{
+	flush_console();
+
+	/* On a normal reboot, INFORM6 will contain a small integer
+	 * reason code from the notifier hook.  On a panic, it will
+	 * contain the 0xee we set at boot.  Write 0xbb to differentiate
+	 * a watchdog-timeout-and-reboot (0xee) from a controlled reboot
+	 * (0xbb)
+	 */
+	if (__raw_readl(S5P_INFORM6) == 0xee)
+		__raw_writel(0xbb, S5P_INFORM6);
+
+	arm_machine_restart(mode, cmd);
+}
+
 static void __init aries_machine_init(void)
 {
+	arm_pm_restart = aries_pm_restart;
+
 	setup_ram_console_mem();
 	s3c_usb_set_serial();
 	platform_add_devices(aries_devices, ARRAY_SIZE(aries_devices));

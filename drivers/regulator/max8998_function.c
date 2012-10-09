@@ -3012,7 +3012,6 @@ unsigned int max8998_poweron_reason(void)
 
 }
 
-/*
 #if defined(CONFIG_MACH_VENTURI)
 int  FSA9480_PMIC_CP_USB(void)
 {
@@ -3029,7 +3028,6 @@ int  FSA9480_PMIC_CP_USB(void)
 	return usb_sel;
 }
 #endif
-*/
 
 int ta_mode = 1;
 void maxim_ta_charging_mode(int mode)
@@ -3094,11 +3092,9 @@ void maxim_charging_control(unsigned int dev_type  , unsigned int cmd)
 	}
 	else if(dev_type == CABLE_TYPE_USB)
 	{	
-/*
 #if defined(CONFIG_MACH_VENTURI)
 		value = FSA9480_PMIC_CP_USB();
 #endif
-*/
 		reg_buff[0] = (0x0<<5) | (0x3<<3) | (0x1<<0) ; // CHG_TOPOFF_TH=10%, CHG_RST_HYS=disable, AC_FCGH= 380mA
 		if(value)
 			reg_buff[1] = (0x2<<6) |(0x3<<4) | (0x0<<3) | (0x0<<1) | (0x0<<0); //ESAFEOUT1,2= 10, FCHG_TMR=disable, MBAT_REG_TH=4.2V, MBATT_THERM_REG=105C

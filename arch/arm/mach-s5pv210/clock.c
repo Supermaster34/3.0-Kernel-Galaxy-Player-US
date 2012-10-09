@@ -534,7 +534,6 @@ static struct clk init_clocks_off[] = {
 		.enable		= s5pv210_clk_ip3_ctrl,
 		.ctrlbit	= S5P_CLKGATE_IP3_PCM2,
 	}, {
-#if 0
 		.name		= "pcm",
 		.id		= 1,
 		.parent		= &clk_pclk_psys.clk,
@@ -547,7 +546,6 @@ static struct clk init_clocks_off[] = {
 		.enable		= s5pv210_clk_ip3_ctrl,
 		.ctrlbit	= S5P_CLKGATE_IP3_PCM0,
 	}, {
-#endif
 		.name		= "i2c-hdmiphy",
 		.id		= -1,
 		.parent		= &clk_pclk_psys.clk,
